@@ -54,8 +54,12 @@ function BlueprintManagerServer:GetNewRandomString()
 
     local pseudorandom = nil
     
-    while(spawnedObjectEntities[pseudorandom] ~= nil) do
-        pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
+	while(true) do
+		pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
+
+		if spawnedObjectEntities[pseudorandom] == nil then
+			break
+		end
     end
 
     return tostring(pseudorandom)
