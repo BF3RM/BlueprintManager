@@ -45,26 +45,20 @@ local spawnedObjectEntities = { }
 local postSpawnedObjects = { }
 local lastDelta = 0
 local currentTime = 0
-
-function BlueprintManagerServer:OnEngineUpdate(p_Delta, p_SimDelta) -- just used for the random seed. probably better solution somehow
-	lastDelta = lastDelta + p_Delta	
-
-	if lastDelta < 0.1 then
-		return
-	end
-	
-	currentTime = currentTime + lastDelta
-
-	lastDelta = 0
-end
+local isRandomseedSet = false
 
 function BlueprintManagerServer:GetNewRandomString()
     if currentTime == 0 then
         error('CurrentTime was 0, that means the OnEngineUpdate didnt start yet. No way you should be spawning stuff already.')
     end
 
-    math.randomseed(currentTime)
-    return tostring(math.random()) -- this will generate something like '0.12414929654836', which is good enough to work as unique ID for us
+    local pseudorandom = nil
+    
+    while(spawnedObjectEntities[pseudorandom] ~= nil) do
+        pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
+    end
+
+    return tostring(pseudorandom)
 end
 
 function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)

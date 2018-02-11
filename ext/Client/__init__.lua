@@ -89,7 +89,7 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
 end
 
 function BlueprintManagerClient:PlayerConnected(player)
-	print("ClientObjectsManager:OnLoaded(): sending requestPostSpawnedObjects client -> server")
+	print("BlueprintManagerClient:OnLoaded(): sending requestPostSpawnedObjects client -> server")
 	NetEvents:SendLocal('RequestPostSpawnedObjects')
 end
 
