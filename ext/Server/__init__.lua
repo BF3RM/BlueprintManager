@@ -43,26 +43,48 @@ end
 
 local spawnedObjectEntities = { }
 local postSpawnedObjects = { }
+local debugDelta = 0
 local lastDelta = 0
 local currentTime = 0
 local isRandomseedSet = false
 
-function BlueprintManagerServer:GetNewRandomString()
-    if currentTime == 0 then
-        error('CurrentTime was 0, that means the OnEngineUpdate didnt start yet. No way you should be spawning stuff already.')
-    end
+function BlueprintManagerServer:OnEngineUpdate(p_Delta, p_SimDelta)
+	lastDelta = lastDelta + p_Delta	
+	debugDelta = debugDelta + p_Delta
 
-    local pseudorandom = nil
-    
+	if lastDelta < 0.1 then -- add check: or round hasnt started yet
+		return
+	end
+	
+	currentTime = currentTime + lastDelta
+
+	if debugDelta >= 5.0 then
+		-- print(currentTime) -- debug only 
+		-- print('checking timers:')
+		-- print(timers)
+		debugDelta = 0
+	end
+
+	lastDelta = 0
+end
+
+function BlueprintManagerServer:GetNewRandomString()
+	if currentTime == 0 then
+		error('CurrentTime was 0, that means the OnEngineUpdate didnt start yet. No way you should be spawning stuff already.')
+	end
+
+	local pseudorandom = nil
+	
 	while(true) do
 		pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
 
-		if spawnedObjectEntities[pseudorandom] == nil then
+		if timers[pseudorandom] == nil then
 			break
 		end
-    end
+	end
 
-    return tostring(pseudorandom)
+	-- print("RealitymodTimer:GetNewRandomString() - got a new random timer name: " .. tostring(pseudorandom))
+	return tostring(pseudorandom)
 end
 
 function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
