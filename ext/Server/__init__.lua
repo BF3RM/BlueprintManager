@@ -1,15 +1,15 @@
 class 'BlueprintManagerServer'
 
 function string:split(sep)
-    local sep, fields = sep or ":", {}
-    local pattern = string.format("([^%s]+)", sep)
-    self:gsub(pattern, function(c) fields[#fields+1] = c end)
-    return fields
- end
+	local sep, fields = sep or ":", {}
+	local pattern = string.format("([^%s]+)", sep)
+	self:gsub(pattern, function(c) fields[#fields+1] = c end)
+	return fields
+end
 
-function BlueprintManagerServer:StringToLinearTransform(p_LinearTransform)
-	local s_LinearTransformRaw = tostring(p_LinearTransform)
-    local s_Split = s_LinearTransformRaw:gsub("%(", ""):gsub("%)", ""):gsub("% ", ","):split(",")
+function BlueprintManagerServer:StringToLinearTransform(linearTransformString)
+	local s_LinearTransformRaw = tostring(linearTransformString)
+	local s_Split = s_LinearTransformRaw:gsub("%(", ""):gsub("%)", ""):gsub("% ", ","):split(",")
 
 	local s_LinearTransform = LinearTransform(
 		Vec3(tonumber(s_Split[1]), tonumber(s_Split[2]), tonumber(s_Split[3])),
@@ -20,7 +20,7 @@ function BlueprintManagerServer:StringToLinearTransform(p_LinearTransform)
 	return s_LinearTransform
 end
 
-------------------------- remove ^^^^
+--- remove this shit ^ 
 
 function BlueprintManagerServer:__init()
 	print("Initializing BlueprintManagerServer")
@@ -33,46 +33,19 @@ end
 
 function BlueprintManagerServer:RegisterEvents()
     Events:Subscribe('BlueprintManager:SpawnBlueprint', self, self.OnSpawnBlueprint)
-    Events:Subscribe('BlueprintManager:DeleteBlueprint', self, self.OnDeleteBlueprint)
-	Events:Subscribe('Engine:Update', self, self.OnEngineUpdate)
+	Events:Subscribe('BlueprintManager:DeleteBlueprint', self, self.OnDeleteBlueprint)
+	Events:Subscribe('BlueprintManager:MoveBlueprint', self, self.OnMoveBlueprint)
 
     NetEvents:Subscribe('RequestPostSpawnedObjects', self, self.OnRequestPostSpawnedObjects)
     NetEvents:Subscribe('SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
     NetEvents:Subscribe('DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
+    NetEvents:Subscribe('MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
 end
 
 local spawnedObjectEntities = { }
 local postSpawnedObjects = { }
-local debugDelta = 0
-local lastDelta = 0
-local currentTime = 0
-local isRandomseedSet = false
-
-function BlueprintManagerServer:OnEngineUpdate(p_Delta, p_SimDelta)
-	lastDelta = lastDelta + p_Delta	
-	debugDelta = debugDelta + p_Delta
-
-	if lastDelta < 0.1 then -- add check: or round hasnt started yet
-		return
-	end
-	
-	currentTime = currentTime + lastDelta
-
-	if debugDelta >= 5.0 then
-		-- print(currentTime) -- debug only 
-		-- print('checking timers:')
-		-- print(timers)
-		debugDelta = 0
-	end
-
-	lastDelta = 0
-end
 
 function BlueprintManagerServer:GetNewRandomString()
-	if currentTime == 0 then
-		error('CurrentTime was 0, that means the OnEngineUpdate didnt start yet. No way you should be spawning stuff already.')
-	end
-
 	local pseudorandom = nil
 	
 	while(true) do
@@ -83,12 +56,11 @@ function BlueprintManagerServer:GetNewRandomString()
 		end
 	end
 
-	-- print("RealitymodTimer:GetNewRandomString() - got a new random timer name: " .. tostring(pseudorandom))
 	return tostring(pseudorandom)
 end
 
 function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
-	print('BlueprintManagerServer: OnRequestPostSpawnedObjects() - Sending postSpawnedObjects one by one')
+	-- print('BlueprintManagerServer: OnRequestPostSpawnedObjects() - Sending postSpawnedObjects one by one')
 
 	if postSpawnedObjects == nil or 
 	   postSpawnedObjects == { } then
@@ -97,108 +69,134 @@ function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
     end
     
     for uniqueString, v in pairs(postSpawnedObjects) do
-        NetEvents:SendTo('SpawnPostSpawnedObjects', player, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, uniqueString)
+		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash)
         -- print('BlueprintManagerServer: ' .. tostring(v.transform))
     end
 end
 
+function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+    -- print('BlueprintManagerServer:OnSpawnBlueprintFromClient() - player ' .. player.id .. ' spawns a blueprint')
+    BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+end
+
+function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	if partitionGuid == nil or
+       blueprintPrimaryInstanceGuid == nil or
+	   linearTransform == nil then
+       error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+       return
+    end
+	
+	linearTransform = self:StringToLinearTransform(linearTransform) -- remove this when it works
+
+    if type(uniqueString) ~= 'string' or 
+       uniqueString == nil then
+        uniqueString = BlueprintManagerServer:GetNewRandomString()
+	end
+	
+	if spawnedObjectEntities[uniqueString] ~= nil then
+		error('BlueprintManagerServer:SpawnObjectBlueprint() - Object with id ' .. uniqueString .. ' already existed as a spawned entity!')
+		return
+	end
+
+	variationNameHash = variationNameHash or 0
+
+	local blueprint = ResourceManager:FindInstanceByGUID(partitionGuid, blueprintPrimaryInstanceGuid)
+
+	if blueprint == nil then
+		error('BlueprintManagerServer:SpawnObjectBlueprint() couldnt find the specified instance')
+		return
+	end
+
+	local objectBlueprint = nil
+
+	if blueprint.typeInfo.name == 'VehicleBlueprint' then
+		objectBlueprint = VehicleBlueprint(blueprint)
+	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
+		objectBlueprint = ObjectBlueprint(blueprint)
+	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
+		objectBlueprint = EffectBlueprint(blueprint)
+	else
+		error('BlueprintManagerServer:SpawnObjectBlueprint() blueprint is not of any type that is supported')
+		print('Actual type: ' .. blueprint.typeInfo.name)
+		return
+	end
+
+	local broadcastToClient = objectBlueprint.typeInfo.name ~= 'VehicleBlueprint' --and objectBlueprint.needNetworkId == false
+
+	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
+
+	if broadcastToClient then
+        NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	end
+
+	local params = EntityCreationParams()
+	params.transform = linearTransform
+	params.variationNameHash = variationNameHash
+	params.networked = objectBlueprint.needNetworkId == true
+
+    local objectEntities = EntityManager:CreateServerEntitiesFromBlueprint(objectBlueprint, params)
+    
+	for i, entity in pairs(objectEntities) do
+		entity:Init(Realm.Realm_ClientAndServer, true)
+    end
+    
+	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, broadcastToClient = broadcastToClient }
+        
+    if broadcastToClient then
+		local postSpawnedObject = { partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, transform = linearTransform, variationNameHash = variationNameHash } 
+        postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
+	end
+end
+
 function BlueprintManagerServer:OnDeleteBlueprintFromClient(player, uniqueString)
-    print('BlueprintManagerServer:OnDeleteBlueprintFromClient() - player ' .. player.id .. ' deletes a blueprint')
     BlueprintManagerServer:OnDeleteBlueprint(uniqueString)
 end
 
 function BlueprintManagerServer:OnDeleteBlueprint(uniqueString)
     if spawnedObjectEntities[uniqueString] ~= nil then
-        for i, entity in pairs(spawnedObjectEntities[uniqueString]) do
+        for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
             if entity ~= nil then
                 entity:Destroy()
             end
         end
+		
+		if spawnedObjectEntities[uniqueString].broadcastToClient then
+        	NetEvents:BroadcastLocal('DeleteBlueprint', uniqueString)
+		end
 
-        spawnedObjectEntities[uniqueString] = nil
-        NetEvents:BroadcastLocal('DeleteBlueprint', uniqueString)
+		spawnedObjectEntities[uniqueString] = nil
     else
         error('BlueprintManagerServer:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. uniqueString)
         return
     end
 
     if postSpawnedObjects[uniqueString] ~= nil then
-        for i, entity in pairs(postSpawnedObjects[uniqueString]) do
-            if entity ~= nil then
-                entity:Destroy()
-            end
-        end
-
         postSpawnedObjects[uniqueString] = nil
     end
 end
 
-function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
-    print('BlueprintManagerServer:OnSpawnBlueprintFromClient() - player ' .. player.id .. ' spawns a blueprint')
-    BlueprintManagerServer:OnSpawnBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
+function BlueprintManagerServer:OnMoveBlueprintFromClient(player, uniqueString, newLinearTransform)
+	BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform)
 end
 
-function BlueprintManagerServer:OnSpawnBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
-	if partitionGuid == nil or
-       blueprintPrimaryInstanceGuid == nil or
-	   linearTransform == nil then
-       error('BlueprintManagerServer: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
-       return
-    end
-    
-    print(type(partitionGuid))
+function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform)
+	if spawnedObjectEntities[uniqueString] == nil then
+        error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
+        return
+	end
+	
+	newLinearTransform = self:StringToLinearTransform(newLinearTransform) -- remove this when it works
 
-    linearTransform = BlueprintManagerServer:StringToLinearTransform(linearTransform) -- remove this once Event types serialization is fixed
-
-    if type(uniqueString) ~= 'string' or 
-       uniqueString == nil then
-        uniqueString = BlueprintManagerServer:GetNewRandomString()
-    end
-
-	local blueprint = ResourceManager:FindInstanceByGUID(partitionGuid, blueprintPrimaryInstanceGuid)
-
-	if blueprint == nil then
-		print('BlueprintManagerServer:SpawnObjectBlueprint() couldnt find the specified instance')
-		return
+	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
+		local s_Entity = SpatialEntity(l_Entity)
+		if s_Entity ~= nil then
+			s_Entity.transform = newLinearTransform
+		end
 	end
 
-	local objectBlueprint = nil
-
-	if blueprint.typeName == 'VehicleBlueprint' then
-		objectBlueprint = VehicleBlueprint(blueprint)
-	elseif blueprint.typeName == 'ObjectBlueprint' then
-		objectBlueprint = ObjectBlueprint(blueprint)
-	elseif blueprint.typeName == 'EffectBlueprint' then
-		objectBlueprint = EffectBlueprint(blueprint)
-	else
-		print('BlueprintManagerServer:SpawnObjectBlueprint() blueprint is not of any type that is supported')
-		print('Actual type: ' .. blueprint.typeName)
-		return
-	end
-
-	print('BlueprintManagerServer: Got spawn object event for '.. objectBlueprint.name)
-
-	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
-	if objectBlueprint.typeName ~= 'VehicleBlueprint' and not objectBlueprint.needNetworkId then
-		print('BlueprintManagerServer: Not a VehicleBlueprint -> BroadcastLocal') -- debug only
-        NetEvents:BroadcastLocal('SpawnObject', partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
-	end
-
-    print(linearTransform)
-    print(objectBlueprint.needNetworkId)
-    local objectEntities = EntityManager:CreateServerEntitiesFromBlueprint(objectBlueprint, linearTransform, objectBlueprint.needNetworkId == true)
-    
-	for i, entity in pairs(objectEntities) do
-		entity:Init(Realm.Realm_ClientAndServer, true)
-    end
-    
-	spawnedObjectEntities[uniqueString] = objectEntities
-        
-    if objectBlueprint.typeName ~= 'VehicleBlueprint' and not objectBlueprint.needNetworkId then
-		local postSpawnedObject = { partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, transform = linearTransform } 
-		print('BlueprintManagerServer: adding table to postSpawnedObjects')
-        print(postSpawnedObject)
-        postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
+	if spawnedObjectEntities[uniqueString].broadcastToClient then
+		NetEvents:BroadcastLocal('MoveBlueprint', uniqueString, newLinearTransform)
 	end
 end
 

@@ -16,55 +16,61 @@ function BlueprintManagerClient:RegisterEvents()
 
     Events:Subscribe('BlueprintManager:SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
     Events:Subscribe('BlueprintManager:DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
+    Events:Subscribe('BlueprintManager:MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
 
-    NetEvents:Subscribe('SpawnObject', self, self.OnSpawnBlueprint)
-    NetEvents:Subscribe('SpawnPostSpawnedObjects', self, self.OnSpawnPostSpawnedObject)
+    NetEvents:Subscribe('SpawnBlueprint', self, self.OnSpawnBlueprint)
     NetEvents:Subscribe('DeleteBlueprint', self, self.OnDeleteBlueprint)
+    NetEvents:Subscribe('MoveBlueprint', self, self.OnMoveBlueprint)
+    NetEvents:Subscribe('SpawnPostSpawnedObjects', self, self.OnSpawnPostSpawnedObject)
 end
 
-function BlueprintManagerClient:OnSpawnBlueprintFromClient(partitionGuid, blueprintPrimaryInstance, linearTransform, uniqueString)
-    NetEvents:SendLocal('SpawnBlueprintFromClient', partitionGuid, blueprintPrimaryInstance, linearTransform, uniqueString)
+function BlueprintManagerClient:OnSpawnBlueprintFromClient(uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
+    NetEvents:SendLocal('SpawnBlueprintFromClient', uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
 end
 
 function BlueprintManagerClient:OnDeleteBlueprintFromClient(uniqueString)
     NetEvents:SendLocal('DeleteBlueprintFromClient', uniqueString)
 end
 
-function BlueprintManagerClient:OnSpawnBlueprint(partitionGuid, blueprintPrimaryInstance, linearTransform, uniqueString) -- this should only be called via NetEvents
+function BlueprintManagerClient:OnMoveBlueprintFromClient(uniqueString, newLinearTransform)
+    NetEvents:SendLocal('MoveBlueprintFromClient', uniqueString, newLinearTransform)
+end
+
+function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash) -- this should only be called via NetEvents
 	if partitionGuid == nil or
-       blueprintPrimaryInstance == nil or
+	blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	    print('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstance, linearTransform) - One or more parameters are nil')
+	    print('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
-	print("BlueprintManagerClient: partitionGuid: " .. partitionGuid:ToString("D") .. " - blueprintPrimaryInstanceGuid: " .. blueprintPrimaryInstance:ToString("D") .. " linearTransform: " .. tostring(linearTransform))
+	variationNameHash = variationNameHash or 0
 
     local blueprint = ResourceManager:FindInstanceByGUID(partitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
-		print('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
+		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
 		return
 	end
 
 	local objectBlueprint = nil
 
-	if blueprint.typeName == 'VehicleBlueprint' then
+	if blueprint.typeInfo.name == 'VehicleBlueprint' then
 		objectBlueprint = VehicleBlueprint(blueprint)
-	elseif blueprint.typeName == 'ObjectBlueprint' then
+	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
 		objectBlueprint = ObjectBlueprint(blueprint)
-	elseif blueprint.typeName == 'EffectBlueprint' then
+	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
 		objectBlueprint = EffectBlueprint(blueprint)
 	else
-		print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint is not of any type that is supported')
-		print('Actual type: ' .. blueprint.typeName)
+		error('BlueprintManagerClient:SpawnObjectBlueprint() blueprint is not of any type that is supported')
+		print('Actual type: ' .. blueprint.typeInfo.name)
 		return
 	end
 
-	print('BlueprintManagerClient: Blueprint TypeName: ' .. objectBlueprint.typeName)
-	print('BlueprintManagerClient: Got spawn object event for '.. objectBlueprint.name)
+	local params = EntityCreationParams()
+	params.transform = linearTransform
+	params.variationNameHash = variationNameHash
 	
-	
-    local objectEntities = EntityManager:CreateClientEntitiesFromBlueprint(objectBlueprint, linearTransform)
+    local objectEntities = EntityManager:CreateClientEntitiesFromBlueprint(objectBlueprint, params)
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
@@ -88,23 +94,34 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
     end
 end
 
+function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform)
+	if spawnedObjectEntities[uniqueString] == nil then
+        error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
+        return
+	end
+	
+	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString]) do
+		local s_Entity = SpatialEntity(l_Entity)
+		
+		if s_Entity ~= nil then
+			s_Entity.transform = newLinearTransform
+		end
+	end
+end
+
 function BlueprintManagerClient:PlayerConnected(player)
-	print("BlueprintManagerClient:OnLoaded(): sending requestPostSpawnedObjects client -> server")
 	NetEvents:SendLocal('RequestPostSpawnedObjects')
 end
 
-function BlueprintManagerClient:OnSpawnPostSpawnedObject(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
+function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	if partitionGuid == nil or
        blueprintPrimaryInstanceGuid == nil or
        linearTransform == nil or 
        uniqueString == nil then
-	   print('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
-	print('BlueprintManagerClient:OnSpawnPostSpawnedObjects() : Spawning postSpawnedObject. PartitionGuid: ' .. partitionGuid:ToString("D") .. ' - PrimaryInstanceGuid: ' .. blueprintPrimaryInstanceGuid)
-	print('BlueprintManagerClient:OnSpawnPostSpawnedObjects() : lineartransform of postSpawnedObject:' .. tostring(linearTransform))
-
-	BlueprintManagerClient:OnSpawnBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, uniqueString)
+	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 end
 
 
