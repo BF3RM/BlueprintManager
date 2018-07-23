@@ -141,7 +141,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		entity:Init(Realm.Realm_ClientAndServer, true)
     end
     
-	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, broadcastToClient = broadcastToClient }
+	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, partitionGuid = partitionGuid, instanceGuid = blueprintPrimaryInstanceGuid, broadcastToClient = broadcastToClient, variationNameHash = variationNameHash }
         
     if broadcastToClient then
 		local postSpawnedObject = { partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, transform = linearTransform, variationNameHash = variationNameHash } 
@@ -188,16 +188,31 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 	
 	newLinearTransform = self:StringToLinearTransform(newLinearTransform) -- remove this when it works
 
-	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
-		local s_Entity = SpatialEntity(l_Entity)
-		if s_Entity ~= nil then
-			s_Entity.transform = newLinearTransform
-		end
-	end
+	-- Changing the transform doesnt work on server (for now at least)
+	-- for i, l_Entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
+	-- 	local s_Entity = SpatialEntity(l_Entity)
+	-- 	if s_Entity ~= nil then
+	-- 		s_Entity.transform = newLinearTransform
+	-- 	end
+	-- end
+
+	-- Workaround:
+	local partitionGuid = spawnedObjectEntities[uniqueString].partitionGuid
+	local instanceGuid = spawnedObjectEntities[uniqueString].instanceGuid
+	print(spawnedObjectEntities[uniqueString])
+
+	self:OnDeleteBlueprint(uniqueString)
+	self:OnSpawnBlueprint(uniqueString, partitionGuid, instanceGuid, newLinearTransform, variationNameHash)
+
+
 
 	if spawnedObjectEntities[uniqueString].broadcastToClient then
 		NetEvents:BroadcastLocal('MoveBlueprint', uniqueString, newLinearTransform)
 	end
+
+	if postSpawnedObjects[uniqueString] ~= nil then
+      postSpawnedObjects[uniqueString].transform = newLinearTransform
+  end
 end
 
 g_BlueprintManagerServer = BlueprintManagerServer()
