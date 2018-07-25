@@ -43,6 +43,11 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	    print('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
+	if spawnedObjectEntities[uniqueString] ~= nil then
+		print('Object with id ' .. uniqueString .. ' already existed as a spawned entity!')
+		return
+	end
+
 	variationNameHash = variationNameHash or 0
 
     local blueprint = ResourceManager:FindInstanceByGUID(partitionGuid, blueprintPrimaryInstanceGuid)
