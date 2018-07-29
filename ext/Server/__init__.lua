@@ -1,5 +1,7 @@
 class 'BlueprintManagerServer'
 
+local timers = {}
+
 function string:split(sep)
 	local sep, fields = sep or ":", {}
 	local pattern = string.format("([^%s]+)", sep)
@@ -52,6 +54,7 @@ function BlueprintManagerServer:GetNewRandomString()
 		pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
 
 		if timers[pseudorandom] == nil then
+				timers[pseudorandom] = true
 			break
 		end
 	end
