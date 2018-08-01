@@ -79,6 +79,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
+		entity:FireEvent("Start")
 	end
 	
 	spawnedObjectEntities[uniqueString] = objectEntities
@@ -110,6 +111,7 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 		
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
+			s_Entity:FireEvent("Reset")
 		end
 	end
 end
