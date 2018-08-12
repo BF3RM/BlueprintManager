@@ -63,6 +63,10 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		objectBlueprint = VehicleBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
 		objectBlueprint = ObjectBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'PrefabBlueprint' then
+	--	objectBlueprint = PrefabBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'SpatialPrefabBlueprint' then
+	--	objectBlueprint = SpatialPrefabBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
 		objectBlueprint = EffectBlueprint(blueprint)
 	else

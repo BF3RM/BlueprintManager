@@ -124,6 +124,10 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		objectBlueprint = VehicleBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
 		objectBlueprint = ObjectBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'PrefabBlueprint' then
+	--	objectBlueprint = PrefabBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'SpatialPrefabBlueprint' then
+	--	objectBlueprint = SpatialPrefabBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
 		objectBlueprint = EffectBlueprint(blueprint)
 	else
@@ -204,6 +208,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
 			print(s_Entity.typeName)
+			s_Entity:FireEvent("Disable")
 			s_Entity:FireEvent("Enable")
 		end
 	end
