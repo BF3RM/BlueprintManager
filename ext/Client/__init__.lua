@@ -56,7 +56,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
 		return
 	end
-
+--[[
 	local objectBlueprint = nil
 
 	if blueprint.typeInfo.name == 'VehicleBlueprint' then
@@ -69,7 +69,15 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		error('BlueprintManagerClient:SpawnObjectBlueprint() blueprint is not of any type that is supported')
 		print('Actual type: ' .. blueprint.typeInfo.name)
 		return
-	end
+	end]]
+
+	
+
+	local objectBlueprint = blueprint
+
+	print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name)
+
+
 
 	local params = EntityCreationParams()
 	params.transform = linearTransform
@@ -79,6 +87,13 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
+
+		s_Entity:FireEvent("Disable")
+		s_Entity:FireEvent("Enable")
+
+		entity:FireEvent("Start")
+
+		VisualEnvironmentManager.dirty = true
 	end
 	
 	spawnedObjectEntities[uniqueString] = objectEntities
@@ -106,10 +121,17 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 	end
 	
 	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString]) do
+
+
 		local s_Entity = SpatialEntity(l_Entity)
 		
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
+
+			--s_Entity:FireEvent("Reset")
+
+			s_Entity:FireEvent("Disable")
+			s_Entity:FireEvent("Enable")
 		end
 	end
 end
