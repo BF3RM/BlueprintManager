@@ -60,7 +60,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	local objectBlueprint = _G[blueprint.typeInfo.name](blueprint)
 
-	print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name)
+	print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name .. " | ID: " .. uniqueString .. " | Instance: " .. tostring(blueprintPrimaryInstanceGuid))
 
 	local params = EntityCreationParams()
 	params.transform = linearTransform
@@ -70,9 +70,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
-
-		s_Entity:FireEvent("Disable")
-		s_Entity:FireEvent("Enable")
+		entity:FireEvent("Start")
 	end
 	
 	spawnedObjectEntities[uniqueString] = objectEntities
@@ -106,9 +104,6 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 		
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
-
-			--s_Entity:FireEvent("Reset")
-
 			s_Entity:FireEvent("Disable")
 			s_Entity:FireEvent("Enable")
 		end

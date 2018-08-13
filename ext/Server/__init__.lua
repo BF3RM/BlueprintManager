@@ -146,11 +146,6 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
-
-		s_Entity:FireEvent("Disable")
-		s_Entity:FireEvent("Enable")
-
-		entity:FireEvent("Start")
     end
     
 	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, broadcastToClient = broadcastToClient, variationNameHash = variationNameHash }
@@ -214,8 +209,6 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 		local s_Entity = SpatialEntity(l_Entity)
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
-			print(s_Entity.typeName)
-
 			s_Entity:FireEvent("Disable")
 			s_Entity:FireEvent("Enable")
 		end
