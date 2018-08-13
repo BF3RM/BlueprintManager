@@ -56,32 +56,11 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
 		return
 	end
---[[
-	local objectBlueprint = nil
 
-	if blueprint.typeInfo.name == 'VehicleBlueprint' then
-		objectBlueprint = VehicleBlueprint(blueprint)
-	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
-		objectBlueprint = ObjectBlueprint(blueprint)
-	--elseif blueprint.typeInfo.name == 'PrefabBlueprint' then
-	--	objectBlueprint = PrefabBlueprint(blueprint)
-	--elseif blueprint.typeInfo.name == 'SpatialPrefabBlueprint' then
-	--	objectBlueprint = SpatialPrefabBlueprint(blueprint)
-	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
-		objectBlueprint = EffectBlueprint(blueprint)
-	else
-		error('BlueprintManagerClient:SpawnObjectBlueprint() blueprint is not of any type that is supported')
-		print('Actual type: ' .. blueprint.typeInfo.name)
-		return
-	end]]
 
-	
-
-	local objectBlueprint = blueprint
+	local objectBlueprint = _G[blueprint.typeInfo.name](blueprint)
 
 	print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name)
-
-
 
 	local params = EntityCreationParams()
 	params.transform = linearTransform
@@ -91,17 +70,9 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
-<<<<<<< HEAD
 
 		s_Entity:FireEvent("Disable")
 		s_Entity:FireEvent("Enable")
-
-		entity:FireEvent("Start")
-
-		VisualEnvironmentManager.dirty = true
-=======
-		entity:FireEvent("Start")
->>>>>>> a8fe6020a9b13118c65fbe07c069c71332c36553
 	end
 	
 	spawnedObjectEntities[uniqueString] = objectEntities
@@ -135,15 +106,11 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 		
 		if s_Entity ~= nil then
 			s_Entity.transform = newLinearTransform
-<<<<<<< HEAD
 
 			--s_Entity:FireEvent("Reset")
 
 			s_Entity:FireEvent("Disable")
 			s_Entity:FireEvent("Enable")
-=======
-			s_Entity:FireEvent("Reset")
->>>>>>> a8fe6020a9b13118c65fbe07c069c71332c36553
 		end
 	end
 end
