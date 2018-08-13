@@ -13,11 +13,12 @@ function BlueprintManagerServer:StringToLinearTransform(linearTransformString)
 	local s_LinearTransformRaw = tostring(linearTransformString)
 	local s_Split = s_LinearTransformRaw:gsub("%(", ""):gsub("%)", ""):gsub("% ", ","):split(",")
 
+	
 	if(s_Split[12] == nil) then
 		print("Failed String2LinearTransform: " .. linearTransformString)
 		return false
 	end
-
+	
 	local s_LinearTransform = LinearTransform(
 		Vec3(tonumber(s_Split[1]), tonumber(s_Split[2]), tonumber(s_Split[3])),
 		Vec3(tonumber(s_Split[4]), tonumber(s_Split[5]), tonumber(s_Split[6])),
@@ -132,6 +133,10 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		objectBlueprint = VehicleBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'ObjectBlueprint' then
 		objectBlueprint = ObjectBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'PrefabBlueprint' then
+	--	objectBlueprint = PrefabBlueprint(blueprint)
+	--elseif blueprint.typeInfo.name == 'SpatialPrefabBlueprint' then
+	--	objectBlueprint = SpatialPrefabBlueprint(blueprint)
 	elseif blueprint.typeInfo.name == 'EffectBlueprint' then
 		objectBlueprint = EffectBlueprint(blueprint)
 	else
@@ -158,11 +163,14 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
+<<<<<<< HEAD
 
 		--s_Entity:FireEvent("Disable")
 		s_Entity:FireEvent("Enable")
 
 		entity:FireEvent("Start")
+=======
+>>>>>>> a8fe6020a9b13118c65fbe07c069c71332c36553
     end
     
 	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, broadcastToClient = broadcastToClient, variationNameHash = variationNameHash }
@@ -223,6 +231,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 
 	--Changing the transform doesnt work on server (for now at least)
 	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
+<<<<<<< HEAD
 
 		--[[
 		local type = l_Entity.typeInfo
@@ -254,6 +263,17 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 		end
 	end
 
+=======
+		local s_Entity = SpatialEntity(l_Entity)
+		if s_Entity ~= nil then
+			s_Entity.transform = newLinearTransform
+			print(s_Entity.typeName)
+			s_Entity:FireEvent("Disable")
+			s_Entity:FireEvent("Enable")
+		end
+	end
+
+>>>>>>> a8fe6020a9b13118c65fbe07c069c71332c36553
 	-- Workaround:
 	--local partitionGuid = spawnedObjectEntities[uniqueString].partitionGuid
 	--local blueprintPrimaryInstanceGuid = spawnedObjectEntities[uniqueString].blueprintPrimaryInstanceGuid
