@@ -58,7 +58,7 @@ function BlueprintManagerServer:GetNewRandomString()
 	local pseudorandom = nil
 	
 	while(true) do
-		pseudorandom = SharedUtils:GetRandom(10000000, 99999999)
+		pseudorandom = MathUtils:GetRandomInt(10000000, 99999999)
 
 		if timers[pseudorandom] == nil then
 				timers[pseudorandom] = true
