@@ -66,7 +66,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.transform = linearTransform
 	params.variationNameHash = variationNameHash
 	
-    local objectEntities = EntityManager:CreateClientEntitiesFromBlueprint(objectBlueprint, params)
+    local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)

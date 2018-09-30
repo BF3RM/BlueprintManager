@@ -142,7 +142,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.variationNameHash = variationNameHash
 	params.networked = objectBlueprint.needNetworkId == true
 
-    local objectEntities = EntityManager:CreateServerEntitiesFromBlueprint(objectBlueprint, params)
+    local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
     
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
