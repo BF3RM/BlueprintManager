@@ -41,18 +41,88 @@ function BlueprintManagerServer:RegisterVars()
 end
 
 function BlueprintManagerServer:RegisterEvents()
-    Events:Subscribe('BlueprintManager:SpawnBlueprint', self, self.OnSpawnBlueprint)
+	Events:Subscribe('BlueprintManager:SpawnBlueprint', self, self.OnSpawnBlueprint)
+	Events:Subscribe('BlueprintManager:DeleteBlueprintByEntityId', self, self.OnDeleteBlueprintByEntityId)
 	Events:Subscribe('BlueprintManager:DeleteBlueprint', self, self.OnDeleteBlueprint)
+	Events:Subscribe('BlueprintManager:MoveBlueprintByEntityId', self, self.OnMoveBlueprintByEntityId)
 	Events:Subscribe('BlueprintManager:MoveBlueprint', self, self.OnMoveBlueprint)
+	Events:Subscribe('BlueprintManager:EnableEntityByEntityId', self, self.OnEnableEntityByEntityId)
+	Events:Subscribe('BlueprintManager:EnableEntity', self, self.OnEnableEntity)
 
-    NetEvents:Subscribe('RequestPostSpawnedObjects', self, self.OnRequestPostSpawnedObjects)
-    NetEvents:Subscribe('SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
-    NetEvents:Subscribe('DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
-    NetEvents:Subscribe('MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
+	NetEvents:Subscribe('RequestPostSpawnedObjects', self, self.OnRequestPostSpawnedObjects)
+	NetEvents:Subscribe('SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
+	NetEvents:Subscribe('DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
+	NetEvents:Subscribe('MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
 end
 
 local spawnedObjectEntities = { }
 local postSpawnedObjects = { }
+
+function BlueprintManagerServer:FindUniqueIdByInstanceId(instanceId)
+
+	for uniqueId, spawnedObjectEntity in pairs(spawnedObjectEntities) do
+		if spawnedObjectEntity.objectEntities ~= nil then
+			for i, objectEntity in ipairs(spawnedObjectEntity.objectEntities) do
+				if instanceId == objectEntity.instanceId then
+					return uniqueId
+				end
+			end
+		end
+	end
+
+	return
+end
+
+-- TODO: implement DeleteBlueprintByEntityId and MoveBlueprintByEntityId
+function BlueprintManagerServer:OnEnableEntityByEntityId(instanceId, enable)
+
+	if instanceId == nil then
+		print("OnEnableEntityByEntityId : instanceId is null")
+		return
+	end
+
+	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
+
+	if foundUniqueId == nil then
+		print("Couldnt find uniqueId for entityId: ".. instanceId)
+	end
+
+	self:OnEnableEntity(foundUniqueId, enable)
+	
+end
+
+function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
+	if uniqueId == nil then
+		print("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
+		return
+	end
+
+	if spawnedObjectEntities[uniqueId] == nil then
+		print("BlueprintManagerServer:OnEnableEntity() : Tried to enable/disable entity that isn't spawned")
+		return
+	end
+
+	for i, objectEntity in ipairs(spawnedObjectEntities[uniqueId].objectEntities) do
+		if enable then
+			objectEntity:FireEvent("Enable")
+			print("enabling entity ".. uniqueId)
+		else
+			objectEntity:FireEvent("Disable")
+			print("disabling entity ".. uniqueId)
+		end
+	end
+
+	spawnedObjectEntities[uniqueId].enabled = enable
+
+	if postSpawnedObjects[uniqueId] ~= nil then
+		postSpawnedObjects[uniqueId].enabled = enable
+  end
+
+	print(spawnedObjectEntities[uniqueId].broadcastToClient)
+	if spawnedObjectEntities[uniqueId].broadcastToClient then
+		NetEvents:BroadcastLocal('EnableEntity', uniqueId, enable)
+	end
+end
 
 function BlueprintManagerServer:GetNewRandomString()
 	local pseudorandom = nil
@@ -76,26 +146,26 @@ function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
 	   postSpawnedObjects == { } then
 		print('BlueprintManagerServer:OnRequestPostSpawnedObjects() : No objects found to spawn. This should only occur if no non-default Blueprints get spawned on the server, or everything got despawned again')
 		return
-    end
-    
-    for uniqueString, v in pairs(postSpawnedObjects) do
-		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash)
-        -- print('BlueprintManagerServer: ' .. tostring(v.transform))
-    end
+	end
+	
+	for uniqueString, v in pairs(postSpawnedObjects) do
+		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash, v.enabled)
+		-- print('BlueprintManagerServer: ' .. tostring(v.transform))
+	end
 end
 
 function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
-    -- print('BlueprintManagerServer:OnSpawnBlueprintFromClient() - player ' .. player.id .. ' spawns a blueprint')
-    BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	-- print('BlueprintManagerServer:OnSpawnBlueprintFromClient() - player ' .. player.id .. ' spawns a blueprint')
+	BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 end
 
 function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly)
 	if partitionGuid == nil or
-       blueprintPrimaryInstanceGuid == nil or
+	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-       error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
-       return
-    end
+	   error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   return
+	end
 	
 	linearTransform = self:StringToLinearTransform(linearTransform) -- remove this when it works
 	if(linearTransform == false) then
@@ -103,10 +173,10 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		return
 	end
 
-    if type(uniqueString) ~= 'string' or 
+	if type(uniqueString) ~= 'string' or 
 	   uniqueString == nil then
 		
-        uniqueString = BlueprintManagerServer:GetNewRandomString()
+		uniqueString = BlueprintManagerServer:GetNewRandomString()
 	end
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
@@ -134,7 +204,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
 
 	if broadcastToClient and serverOnly ~= true then
-        NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+		NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	end
 
 	local params = EntityCreationParams()
@@ -142,62 +212,108 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.variationNameHash = variationNameHash
 	params.networked = objectBlueprint.needNetworkId == true
 
-    local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
-    
+	local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
+
+	if objectEntities == nil then
+		return
+	end
+
 	for i, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
-    end
-    
-	spawnedObjectEntities[uniqueString] = { objectEntities = objectEntities, partitionGuid = partitionGuid, blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, broadcastToClient = broadcastToClient, variationNameHash = variationNameHash }
-        
-    if broadcastToClient then
+	end
+	
+	spawnedObjectEntities[uniqueString] = { 
+		objectEntities = objectEntities, 
+		partitionGuid = partitionGuid, 
+		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
+		broadcastToClient = broadcastToClient, 
+		variationNameHash = variationNameHash,
+		enabled = true
+	}
+		
+	if broadcastToClient then
 		local postSpawnedObject = 
 		{ 
 			partitionGuid = partitionGuid, 
 			blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
 			transform = linearTransform, 
-			variationNameHash = variationNameHash 
+			variationNameHash = variationNameHash,
+			enabled = true
 		}
 
-        postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
+		postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
 	end
+
+
+end
+
+function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
+
+	if instanceId == nil then
+		print("OnDeleteBlueprintByEntityId : instanceId is null")
+		return
+	end
+
+	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
+
+	if foundUniqueId == nil then
+		print("Couldnt find uniqueId for entityId: ".. instanceId)
+	end
+
+	self:OnDeleteBlueprint(foundUniqueId)
 end
 
 function BlueprintManagerServer:OnDeleteBlueprintFromClient(player, uniqueString)
-    BlueprintManagerServer:OnDeleteBlueprint(uniqueString)
+	BlueprintManagerServer:OnDeleteBlueprint(uniqueString)
 end
 
 function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
-    if spawnedObjectEntities[uniqueString] ~= nil then
-        for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
-            if entity ~= nil then
-                entity:Destroy()
-            end
-        end
+	if spawnedObjectEntities[uniqueString] ~= nil then
+		for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
+			if entity ~= nil then
+				entity:Destroy()
+			end
+		end
 		
 		if spawnedObjectEntities[uniqueString].broadcastToClient and serverOnly ~= true then
-        	NetEvents:BroadcastLocal('DeleteBlueprint', uniqueString)
+			NetEvents:BroadcastLocal('DeleteBlueprint', uniqueString)
 		end
 
 		spawnedObjectEntities[uniqueString] = nil
-    else
-        error('BlueprintManagerServer:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. uniqueString)
-        return
-    end
+	else
+		error('BlueprintManagerServer:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. uniqueString)
+		return
+	end
 
-    if postSpawnedObjects[uniqueString] ~= nil then
-        postSpawnedObjects[uniqueString] = nil
-    end
+	if postSpawnedObjects[uniqueString] ~= nil then
+		postSpawnedObjects[uniqueString] = nil
+	end
 end
 
 function BlueprintManagerServer:OnMoveBlueprintFromClient(player, uniqueString, newLinearTransform)
 	BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform)
 end
 
+function BlueprintManagerServer:OnMoveBlueprintByEntityId(instanceId, newLinearTransform)
+
+	if instanceId == nil then
+		print("OnMoveBlueprintByEntityId : instanceId is null")
+		return
+	end
+
+	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
+
+	if foundUniqueId == nil then
+		print("Couldnt find uniqueId for entityId: ".. instanceId)
+	end
+
+	self:OnMoveBlueprint(foundUniqueId, newLinearTransform)
+end
+
 function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform)
 	if spawnedObjectEntities[uniqueString] == nil then
-        error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
-        return
+		error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
+		return
 	end
 
 	print("Moving [" .. uniqueString .. "]")
@@ -227,7 +343,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 	end
 --
 	--if postSpawnedObjects[uniqueString] ~= nil then
-    --  postSpawnedObjects[uniqueString].transform = newLinearTransform
+	--  postSpawnedObjects[uniqueString].transform = newLinearTransform
   --end
 end
 

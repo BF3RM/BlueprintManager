@@ -22,7 +22,26 @@ function BlueprintManagerClient:RegisterEvents()
     NetEvents:Subscribe('DeleteBlueprint', self, self.OnDeleteBlueprint)
     NetEvents:Subscribe('MoveBlueprint', self, self.OnMoveBlueprint)
     NetEvents:Subscribe('SpawnPostSpawnedObjects', self, self.OnSpawnPostSpawnedObject)
+    NetEvents:Subscribe('EnableEntity', self, self.OnEnableEntity)
 end
+
+function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
+	if spawnedObjectEntities[uniqueString] == nil then
+		print('Tring to enable/disable an entity that doesnt exist!')
+		return
+	end
+
+	for i, objectEntity in pairs(spawnedObjectEntities[uniqueString]) do
+		if enable then
+			objectEntity:FireEvent("Enable")
+			print("enabling entity ".. uniqueString)
+		else
+			objectEntity:FireEvent("Disable")
+			print("disabling entity ".. uniqueString)
+		end
+	end
+end
+
 
 function BlueprintManagerClient:OnSpawnBlueprintFromClient(uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
     NetEvents:SendLocal('SpawnBlueprintFromClient', uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
@@ -114,15 +133,22 @@ function BlueprintManagerClient:PlayerConnected(player)
 	NetEvents:SendLocal('RequestPostSpawnedObjects')
 end
 
-function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled)
 	if partitionGuid == nil or
        blueprintPrimaryInstanceGuid == nil or
        linearTransform == nil or 
-       uniqueString == nil then
+       uniqueString == nil or
+       enabled == nil then
 	   error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+
+	print("OnSpawnPostSpawnedObject")
+	print(enabled)
+	if not enabled then
+		self:OnEnableEntity(uniqueString, enable)
+	end
 end
 
 
