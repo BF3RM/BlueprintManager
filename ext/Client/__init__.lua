@@ -27,17 +27,17 @@ end
 
 function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
 	if spawnedObjectEntities[uniqueString] == nil then
-		print('Tring to enable/disable an entity that doesnt exist!')
+		error('Tring to enable/disable an entity that doesnt exist!')
 		return
 	end
 
 	for i, objectEntity in pairs(spawnedObjectEntities[uniqueString]) do
 		if enable then
 			objectEntity:FireEvent("Enable")
-			print("enabling entity ".. uniqueString)
+			-- print("enabling entity ".. uniqueString)
 		else
 			objectEntity:FireEvent("Disable")
-			print("disabling entity ".. uniqueString)
+			-- print("disabling entity ".. uniqueString)
 		end
 	end
 end
@@ -59,11 +59,11 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	if partitionGuid == nil or
 	blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	    print('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	    error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	if spawnedObjectEntities[uniqueString] ~= nil then
-		print('Object with id ' .. uniqueString .. ' already existed as a spawned entity!')
+		error('Object with id ' .. uniqueString .. ' already existed as a spawned entity!')
 		return
 	end
 
@@ -79,7 +79,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	local objectBlueprint = _G[blueprint.typeInfo.name](blueprint)
 
-	print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name .. " | ID: " .. uniqueString .. " | Instance: " .. tostring(blueprintPrimaryInstanceGuid))
+	-- print('BlueprintManagerClient:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name .. " | ID: " .. uniqueString .. " | Instance: " .. tostring(blueprintPrimaryInstanceGuid))
 
 	local params = EntityCreationParams()
 	params.transform = linearTransform
@@ -144,8 +144,8 @@ function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partition
 
 	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 
-	print("OnSpawnPostSpawnedObject")
-	print(enabled)
+	-- print("OnSpawnPostSpawnedObject")
+	-- print(enabled)
 	if not enabled then
 		self:OnEnableEntity(uniqueString, enable)
 	end

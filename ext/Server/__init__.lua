@@ -15,7 +15,7 @@ function BlueprintManagerServer:StringToLinearTransform(linearTransformString)
 
 	
 	if(s_Split[12] == nil) then
-		print("Failed String2LinearTransform: " .. linearTransformString)
+		error("Failed String2LinearTransform: " .. linearTransformString)
 		return false
 	end
 	
@@ -77,14 +77,14 @@ end
 function BlueprintManagerServer:OnEnableEntityByEntityId(instanceId, enable)
 
 	if instanceId == nil then
-		print("OnEnableEntityByEntityId : instanceId is null")
+		error("OnEnableEntityByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		print("Couldnt find uniqueId for entityId: ".. instanceId)
+		error("Couldnt find uniqueId for entityId: ".. instanceId)
 	end
 
 	self:OnEnableEntity(foundUniqueId, enable)
@@ -93,22 +93,22 @@ end
 
 function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 	if uniqueId == nil then
-		print("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
+		error("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
 		return
 	end
 
 	if spawnedObjectEntities[uniqueId] == nil then
-		print("BlueprintManagerServer:OnEnableEntity() : Tried to enable/disable entity that isn't spawned")
+		error("BlueprintManagerServer:OnEnableEntity() : Tried to enable/disable entity that isn't spawned")
 		return
 	end
 
 	for i, objectEntity in ipairs(spawnedObjectEntities[uniqueId].objectEntities) do
 		if enable then
 			objectEntity:FireEvent("Enable")
-			print("enabling entity ".. uniqueId)
+			-- print("enabling entity ".. uniqueId)
 		else
 			objectEntity:FireEvent("Disable")
-			print("disabling entity ".. uniqueId)
+			-- print("disabling entity ".. uniqueId)
 		end
 	end
 
@@ -118,7 +118,7 @@ function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 		postSpawnedObjects[uniqueId].enabled = enable
   end
 
-	print(spawnedObjectEntities[uniqueId].broadcastToClient)
+	-- print(spawnedObjectEntities[uniqueId].broadcastToClient)
 	if spawnedObjectEntities[uniqueId].broadcastToClient then
 		NetEvents:BroadcastLocal('EnableEntity', uniqueId, enable)
 	end
@@ -144,7 +144,7 @@ function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
 
 	if postSpawnedObjects == nil or 
 	   postSpawnedObjects == { } then
-		print('BlueprintManagerServer:OnRequestPostSpawnedObjects() : No objects found to spawn. This should only occur if no non-default Blueprints get spawned on the server, or everything got despawned again')
+		-- print('BlueprintManagerServer:OnRequestPostSpawnedObjects() : No objects found to spawn. This should only occur if no non-default Blueprints get spawned on the server, or everything got despawned again')
 		return
 	end
 	
@@ -250,14 +250,14 @@ end
 function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
 
 	if instanceId == nil then
-		print("OnDeleteBlueprintByEntityId : instanceId is null")
+		error("OnDeleteBlueprintByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		print("Couldnt find uniqueId for entityId: ".. instanceId)
+		error("Couldnt find uniqueId for entityId: ".. instanceId)
 	end
 
 	self:OnDeleteBlueprint(foundUniqueId)
@@ -297,14 +297,14 @@ end
 function BlueprintManagerServer:OnMoveBlueprintByEntityId(instanceId, newLinearTransform)
 
 	if instanceId == nil then
-		print("OnMoveBlueprintByEntityId : instanceId is null")
+		error("OnMoveBlueprintByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		print("Couldnt find uniqueId for entityId: ".. instanceId)
+		error("Couldnt find uniqueId for entityId: ".. instanceId)
 	end
 
 	self:OnMoveBlueprint(foundUniqueId, newLinearTransform)
@@ -316,7 +316,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 		return
 	end
 
-	print("Moving [" .. uniqueString .. "]")
+	-- print("Moving [" .. uniqueString .. "]")
 	
 	newLinearTransform = self:StringToLinearTransform(newLinearTransform) -- remove this when it works
 
