@@ -12,7 +12,7 @@ end
 local spawnedObjectEntities = { }
 
 function BlueprintManagerClient:RegisterEvents()
-    Events:Subscribe('Player:Connected', self, self.PlayerConnected)
+    Events:Subscribe('Level:LoadingInfo', self, self.OnLevelLoadingInfo)
 
     Events:Subscribe('BlueprintManager:SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
     Events:Subscribe('BlueprintManager:DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
@@ -129,8 +129,10 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 	end
 end
 
-function BlueprintManagerClient:PlayerConnected(player)
-	NetEvents:SendLocal('RequestPostSpawnedObjects')
+function BlueprintManagerClient:OnLevelLoadingInfo(info)
+	if info == 'Sending spawn messages' then
+		NetEvents:SendLocal('RequestPostSpawnedObjects')
+	end
 end
 
 function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled)
