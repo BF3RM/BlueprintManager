@@ -84,14 +84,21 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	local params = EntityCreationParams()
 	params.transform = linearTransform
 	params.variationNameHash = variationNameHash
-	
-    local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
-    
-	for i, entity in pairs(objectEntities) do
+
+	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
+
+	if entityBus == nil then
+		error('entityBus was nil')
+		return
+	end
+
+	local objectEntities = entityBus.entities
+
+	for _, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
 		entity:FireEvent("Start")
 	end
-	
+
 	spawnedObjectEntities[uniqueString] = objectEntities
 end
 

@@ -197,8 +197,6 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	-- print('BlueprintManagerServer:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name)
 
-
-
 	local broadcastToClient = objectBlueprint.needNetworkId == false
 
 	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
@@ -212,16 +210,19 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.variationNameHash = variationNameHash
 	params.networked = objectBlueprint.needNetworkId == true
 
-	local objectEntities = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
+	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
-	if objectEntities == nil then
+	if entityBus == nil then
+		error('entityBus was nil')
 		return
 	end
 
-	for i, entity in pairs(objectEntities) do
+	local objectEntities = entityBus.entities
+
+	for _, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
 	end
-	
+
 	spawnedObjectEntities[uniqueString] = { 
 		objectEntities = objectEntities, 
 		partitionGuid = partitionGuid, 
@@ -230,7 +231,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		variationNameHash = variationNameHash,
 		enabled = true
 	}
-		
+
 	if broadcastToClient then
 		local postSpawnedObject = 
 		{ 
@@ -243,8 +244,6 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 		postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
 	end
-
-
 end
 
 function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
