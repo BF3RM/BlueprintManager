@@ -69,7 +69,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	variationNameHash = variationNameHash or 0
 
-    local blueprint = ResourceManager:FindInstanceByGUID(partitionGuid, blueprintPrimaryInstanceGuid)
+    local blueprint = ResourceManager:FindInstanceByGuid(partitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
 		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
