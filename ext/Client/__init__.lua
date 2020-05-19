@@ -43,8 +43,8 @@ function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
 end
 
 
-function BlueprintManagerClient:OnSpawnBlueprintFromClient(uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
-    NetEvents:SendLocal('SpawnBlueprintFromClient', uniqueString, partitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
+function BlueprintManagerClient:OnSpawnBlueprintFromClient(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
+    NetEvents:SendLocal('SpawnBlueprintFromClient', uniqueString, blueprintPartitionGuid, blueprintPrimaryInstance, linearTransform, variationNameHash)
 end
 
 function BlueprintManagerClient:OnDeleteBlueprintFromClient(uniqueString)
@@ -55,11 +55,11 @@ function BlueprintManagerClient:OnMoveBlueprintFromClient(uniqueString, newLinea
     NetEvents:SendLocal('MoveBlueprintFromClient', uniqueString, newLinearTransform)
 end
 
-function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash) -- this should only be called via NetEvents
-	if partitionGuid == nil or
+function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash) -- this should only be called via NetEvents
+	if blueprintPartitionGuid == nil or
 	blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	    error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	    error('BlueprintManagerClient: SpawnObjectBlueprint(blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	if spawnedObjectEntities[uniqueString] ~= nil then
@@ -69,7 +69,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	variationNameHash = variationNameHash or 0
 
-    local blueprint = ResourceManager:FindInstanceByGuid(partitionGuid, blueprintPrimaryInstanceGuid)
+    local blueprint = ResourceManager:FindInstanceByGuid(blueprintPartitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
 		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
@@ -142,16 +142,16 @@ function BlueprintManagerClient:OnLevelLoadingInfo(info)
 	end
 end
 
-function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled)
-	if partitionGuid == nil or
+function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled)
+	if blueprintPartitionGuid == nil or
        blueprintPrimaryInstanceGuid == nil or
        linearTransform == nil or 
        uniqueString == nil or
        enabled == nil then
-	   error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   error('BlueprintManagerClient: SpawnObjectBlueprint(blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
-	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 
 	-- print("OnSpawnPostSpawnedObject")
 	-- print(enabled)

@@ -2,35 +2,6 @@ class 'BlueprintManagerServer'
 
 local timers = {}
 
-function string:split(sep)
-	local sep, fields = sep or ":", {}
-	local pattern = string.format("([^%s]+)", sep)
-	self:gsub(pattern, function(c) fields[#fields+1] = c end)
-	return fields
-end
-
-function BlueprintManagerServer:StringToLinearTransform(linearTransformString)
-	local s_LinearTransformRaw = tostring(linearTransformString)
-	local s_Split = s_LinearTransformRaw:gsub("%(", ""):gsub("%)", ""):gsub("% ", ","):split(",")
-
-	
-	if(s_Split[12] == nil) then
-		error("Failed String2LinearTransform: " .. linearTransformString)
-		return false
-	end
-	
-	local s_LinearTransform = LinearTransform(
-		Vec3(tonumber(s_Split[1]), tonumber(s_Split[2]), tonumber(s_Split[3])),
-		Vec3(tonumber(s_Split[4]), tonumber(s_Split[5]), tonumber(s_Split[6])),
-		Vec3(tonumber(s_Split[7]), tonumber(s_Split[8]), tonumber(s_Split[9])),
-		Vec3(tonumber(s_Split[10]),tonumber(s_Split[11]),tonumber(s_Split[12]))
-	)
-	
-	return s_LinearTransform
-end
-
---- remove this shit ^ 
-
 function BlueprintManagerServer:__init()
 	print("Initializing BlueprintManagerServer")
 	self:RegisterVars()
@@ -149,29 +120,29 @@ function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
 	end
 	
 	for uniqueString, v in pairs(postSpawnedObjects) do
-		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash, v.enabled)
+		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.blueprintPartitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash, v.enabled)
 		-- print('BlueprintManagerServer: ' .. tostring(v.transform))
 	end
 end
 
-function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	-- print('BlueprintManagerServer:OnSpawnBlueprintFromClient() - player ' .. player.id .. ' spawns a blueprint')
-	BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	BlueprintManagerServer:OnSpawnBlueprint(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 end
 
-function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly)
-	if partitionGuid == nil or
+function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, registerEntityDestroyCallback)
+	if blueprintPartitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	   error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   error('BlueprintManagerServer:SpawnObjectBlueprint(blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	   return
 	end
 	
-	linearTransform = self:StringToLinearTransform(linearTransform) -- remove this when it works
-	if(linearTransform == false) then
-		print("Failed to move blueprint.")
-		return
-	end
+	-- linearTransform = self:StringToLinearTransform(linearTransform) -- remove this when it works
+	-- if(linearTransform == false) then
+	-- 	print("Failed to move blueprint.")
+	-- 	return
+	-- end
 
 	if type(uniqueString) ~= 'string' or 
 	   uniqueString == nil then
@@ -186,7 +157,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	variationNameHash = variationNameHash or 0
 
-	local blueprint = ResourceManager:FindInstanceByGuid(partitionGuid, blueprintPrimaryInstanceGuid)
+	local blueprint = ResourceManager:FindInstanceByGuid(blueprintPartitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
 		error('BlueprintManagerServer:SpawnObjectBlueprint() couldnt find the specified instance')
@@ -202,7 +173,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
 
 	if broadcastToClient and serverOnly ~= true then
-		NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+		NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, blueprintPartitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	end
 
 	local params = EntityCreationParams()
@@ -219,13 +190,17 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	local objectEntities = entityBus.entities
 
-	for _, entity in pairs(objectEntities) do
-		entity:Init(Realm.Realm_Server, true)
+	for _, l_Entity in pairs(objectEntities) do
+		if registerEntityDestroyCallback then
+			l_Entity:RegisterDestroyCallback(function(entity) self:RegisterDestroyCallback(entity, uniqueString) end)
+		end
+
+		l_Entity:Init(Realm.Realm_Server, true)
 	end
 
 	spawnedObjectEntities[uniqueString] = { 
 		objectEntities = objectEntities, 
-		partitionGuid = partitionGuid, 
+		blueprintPartitionGuid = blueprintPartitionGuid, 
 		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
 		broadcastToClient = broadcastToClient, 
 		variationNameHash = variationNameHash,
@@ -235,7 +210,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	if broadcastToClient then
 		local postSpawnedObject = 
 		{ 
-			partitionGuid = partitionGuid, 
+			blueprintPartitionGuid = blueprintPartitionGuid, 
 			blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
 			transform = linearTransform, 
 			variationNameHash = variationNameHash,
@@ -244,6 +219,10 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 		postSpawnedObjects[uniqueString] = postSpawnedObject -- these objects will get loaded for new clients joining the game later
 	end
+end
+
+function BlueprintManagerServer:RegisterDestroyCallback(entity, uniqueString)
+	Events:Dispatch('BlueprintManager:EntityDestroyed', uniqueString, entity.uniqueId)
 end
 
 function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
@@ -317,7 +296,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 
 	-- print("Moving [" .. uniqueString .. "]")
 	
-	newLinearTransform = self:StringToLinearTransform(newLinearTransform) -- remove this when it works
+	-- newLinearTransform = self:StringToLinearTransform(newLinearTransform) -- remove this when it works
 
 	--Changing the transform doesnt work on server (for now at least)
 	for i, l_Entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
