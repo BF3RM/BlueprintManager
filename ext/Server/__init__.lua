@@ -159,7 +159,7 @@ function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString,
 	BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 end
 
-function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly)
+function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, networked)
 	if partitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
@@ -208,7 +208,16 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	local params = EntityCreationParams()
 	params.transform = linearTransform
 	params.variationNameHash = variationNameHash
-	params.networked = objectBlueprint.needNetworkId == true
+
+	--this is required for some blueprints because they must be in Realm.Realm_Client
+	--e.g. "XP_Raw/Props/SupplyAirdrop_01/SupplyAirdrop_01_XP"
+	--this may mean that the object you are spawning does not have collisions 
+
+	if(networked == nil)then
+		params.networked = objectBlueprint.needNetworkId == true
+	else
+		params.networked = networked
+	end
 
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
