@@ -159,7 +159,7 @@ function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString,
 	BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 end
 
-function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, networked)
+function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, networked, indestructable)
 	if partitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
@@ -230,6 +230,15 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	for _, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Server, true)
+		if(indestructable ~= nil and indestructable == true)then
+			local s_physEnt = PhysicsEntity(entity)
+			if(s_physEnt ~= nil)then
+				local dmgFunc = function(ent, dmgInfo, dmgGiverInfo)
+					return false
+				end
+				s_physEnt:RegisterDamageCallback(dmgFunc)
+			end
+		end
 	end
 
 	spawnedObjectEntities[uniqueString] = { 
