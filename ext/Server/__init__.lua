@@ -41,6 +41,8 @@ function BlueprintManagerServer:RegisterVars()
 end
 
 function BlueprintManagerServer:RegisterEvents()
+	Events:Subscribe('Level:Destroy', self, self.OnLevelDestroyed)
+
 	Events:Subscribe('BlueprintManager:SpawnBlueprint', self, self.OnSpawnBlueprint)
 	Events:Subscribe('BlueprintManager:DeleteBlueprintByEntityId', self, self.OnDeleteBlueprintByEntityId)
 	Events:Subscribe('BlueprintManager:DeleteBlueprint', self, self.OnDeleteBlueprint)
@@ -57,6 +59,11 @@ end
 
 local spawnedObjectEntities = { }
 local postSpawnedObjects = { }
+
+function BlueprintManagerServer:OnLevelDestroyed()
+	spawnedObjectEntities = { }
+	postSpawnedObjects = { }
+end
 
 function BlueprintManagerServer:FindUniqueIdByInstanceId(instanceId)
 

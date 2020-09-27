@@ -13,6 +13,7 @@ local spawnedObjectEntities = { }
 
 function BlueprintManagerClient:RegisterEvents()
     Events:Subscribe('Level:LoadingInfo', self, self.OnLevelLoadingInfo)
+    Events:Subscribe('Level:Destroy', self, self.OnLevelDestroyed)
 
     Events:Subscribe('BlueprintManager:SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
     Events:Subscribe('BlueprintManager:DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
@@ -23,6 +24,10 @@ function BlueprintManagerClient:RegisterEvents()
     NetEvents:Subscribe('MoveBlueprint', self, self.OnMoveBlueprint)
     NetEvents:Subscribe('SpawnPostSpawnedObjects', self, self.OnSpawnPostSpawnedObject)
     NetEvents:Subscribe('EnableEntity', self, self.OnEnableEntity)
+end
+
+function BlueprintManagerClient:OnLevelDestroyed()
+	spawnedObjectEntities = { }
 end
 
 function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
