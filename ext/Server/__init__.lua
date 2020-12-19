@@ -167,6 +167,8 @@ function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString,
 end
 
 function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, networked, indestructable)
+	serverOnly = serverOnly or false
+	
 	if partitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
@@ -204,11 +206,11 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	-- print('BlueprintManagerServer:SpawnObjectBlueprint() blueprint type: ' .. blueprint.typeInfo.name)
 
-	local broadcastToClient = objectBlueprint.needNetworkId == false
+	local broadcastToClient = not objectBlueprint.needNetworkId
 
 	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
 
-	if broadcastToClient and serverOnly ~= true then
+	if broadcastToClient and serverOnly == false then
 		NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	end
 
@@ -221,7 +223,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	--this may mean that the object you are spawning does not have collisions 
 
 	if(networked == nil)then
-		params.networked = objectBlueprint.needNetworkId == true
+		params.networked = objectBlueprint.needNetworkId
 	else
 		params.networked = networked
 	end
