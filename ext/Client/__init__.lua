@@ -93,7 +93,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
 	if entityBus == nil then
-		error('entityBus was nil')
+		--error('entityBus was nil')
 		return
 	end
 
