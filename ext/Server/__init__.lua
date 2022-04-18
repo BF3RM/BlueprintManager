@@ -1,7 +1,7 @@
 class 'BlueprintManagerServer'
 require "__shared/Logger"
 
-local m_Logger = Logger("BlueprintManager", true)
+local m_Logger = Logger("BlueprintManager", false)
 
 local timers = {}
 
