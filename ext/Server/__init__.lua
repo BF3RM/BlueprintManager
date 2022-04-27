@@ -1,4 +1,7 @@
 class 'BlueprintManagerServer'
+require "__shared/Logger"
+
+local m_Logger = Logger("BlueprintManager", false)
 
 local timers = {}
 
@@ -83,6 +86,8 @@ end
 -- TODO: implement DeleteBlueprintByEntityId and MoveBlueprintByEntityId
 function BlueprintManagerServer:OnEnableEntityByEntityId(instanceId, enable)
 
+	m_Logger:Write("Server received request to enable entity with instanceId: " .. tostring(instanceId))
+
 	if instanceId == nil then
 		error("OnEnableEntityByEntityId : instanceId is null")
 		return
@@ -99,6 +104,13 @@ function BlueprintManagerServer:OnEnableEntityByEntityId(instanceId, enable)
 end
 
 function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
+	
+	if enable then
+		m_Logger:Write("Server received request to enable blueprint with uniqueId: " .. uniqueId)
+	else
+		m_Logger:Write("Server received request to disable blueprint with uniqueId: " .. uniqueId)
+	end
+	
 	if uniqueId == nil then
 		error("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
 		return
@@ -123,10 +135,17 @@ function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 
 	if postSpawnedObjects[uniqueId] ~= nil then
 		postSpawnedObjects[uniqueId].enabled = enable
-  end
+  	end
 
 	-- print(spawnedObjectEntities[uniqueId].broadcastToClient)
 	if spawnedObjectEntities[uniqueId].broadcastToClient then
+		
+		if enable then
+			m_Logger:Write("Sending command to clients to enable blueprint with uniqueId: " .. uniqueId)
+		else
+			m_Logger:Write("Sending command to clients to disable blueprint with uniqueId: " .. uniqueId)
+		end
+	
 		NetEvents:BroadcastLocal('EnableEntity', uniqueId, enable)
 	end
 end
@@ -167,6 +186,9 @@ function BlueprintManagerServer:OnSpawnBlueprintFromClient(player, uniqueString,
 end
 
 function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, serverOnly, networked, indestructable)
+	
+	m_Logger:Write("Server received request to spawn blueprint with guid: " .. tostring(blueprintPrimaryInstanceGuid))
+	
 	serverOnly = serverOnly or false
 	
 	if partitionGuid == nil or
@@ -211,6 +233,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	-- vehicle spawns or blueprint marked with needNetworkId == true dont need to be broadcast local
 
 	if broadcastToClient and serverOnly == false then
+		m_Logger:Write("Sending command to clients to spawn blueprint with guid: " .. tostring(blueprintPrimaryInstanceGuid))
 		NetEvents:BroadcastLocal('SpawnBlueprint', uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
 	end
 
@@ -275,6 +298,8 @@ end
 
 function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
 
+	m_Logger:Write("Server received request to spawn blueprint with instanceId: " .. tostring(instanceId))
+	
 	if instanceId == nil then
 		error("OnDeleteBlueprintByEntityId : instanceId is null")
 		return
@@ -294,6 +319,9 @@ function BlueprintManagerServer:OnDeleteBlueprintFromClient(player, uniqueString
 end
 
 function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
+	
+	m_Logger:Write("Server received request to spawn blueprint with uniqueString: " .. uniqueString)
+	
 	if spawnedObjectEntities[uniqueString] ~= nil then
 		for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
 			if entity ~= nil then
@@ -302,6 +330,7 @@ function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
 		end
 		
 		if spawnedObjectEntities[uniqueString].broadcastToClient and serverOnly ~= true then
+			m_Logger:Write("Sending command to clients to delete blueprint with uniqueString: " .. uniqueString)
 			NetEvents:BroadcastLocal('DeleteBlueprint', uniqueString)
 		end
 
@@ -322,6 +351,8 @@ end
 
 function BlueprintManagerServer:OnMoveBlueprintByEntityId(instanceId, newLinearTransform)
 
+	m_Logger:Write("Server received request to move blueprint with instanceId: " .. tostring(instanceId))
+
 	if instanceId == nil then
 		error("OnMoveBlueprintByEntityId : instanceId is null")
 		return
@@ -337,6 +368,9 @@ function BlueprintManagerServer:OnMoveBlueprintByEntityId(instanceId, newLinearT
 end
 
 function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform)
+	
+	m_Logger:Write("Server received request to move entity with uniqueString: " .. uniqueString)
+
 	if spawnedObjectEntities[uniqueString] == nil then
 		error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
 		return
@@ -365,6 +399,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 --
 --
 	if spawnedObjectEntities[uniqueString].broadcastToClient then
+		m_Logger:Write("Sending command to clients to move blueprint with uniqueString: " .. uniqueString)
 		NetEvents:BroadcastLocal('MoveBlueprint', uniqueString, newLinearTransform)
 	end
 --

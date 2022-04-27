@@ -1,4 +1,7 @@
 class 'BlueprintManagerClient'
+require "__shared/Logger"
+
+local m_Logger = Logger("BlueprintManager", false)
 
 function BlueprintManagerClient:__init()
 	print("Initializing BlueprintManagerClient")
@@ -31,6 +34,13 @@ function BlueprintManagerClient:OnLevelDestroyed()
 end
 
 function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
+	
+	if enable then
+		m_Logger:Write("Client received request to enable blueprint with uniqueString: " .. uniqueString)
+	else
+		m_Logger:Write("Client received request to disable blueprint with uniqueString: " .. uniqueString)
+	end
+	
 	if spawnedObjectEntities[uniqueString] == nil then
 		error('Tring to enable/disable an entity that doesnt exist!')
 		return
@@ -61,6 +71,9 @@ function BlueprintManagerClient:OnMoveBlueprintFromClient(uniqueString, newLinea
 end
 
 function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash) -- this should only be called via NetEvents
+	
+	m_Logger:Write("Client received request to spawn blueprint with guid: " .. tostring(blueprintPrimaryInstanceGuid))
+	
 	if partitionGuid == nil or
 	blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
@@ -108,7 +121,10 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 end
 
 function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
-    if spawnedObjectEntities[uniqueString] ~= nil then
+    
+	m_Logger:Write("Client received request to delete blueprint with uniqueString: " .. uniqueString)
+	
+	if spawnedObjectEntities[uniqueString] ~= nil then
         for i, entity in pairs(spawnedObjectEntities[uniqueString]) do
             if entity ~= nil then
                 entity:Destroy()
@@ -123,6 +139,9 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
 end
 
 function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform)
+	
+	m_Logger:Write("Client received request to move blueprint with uniqueString: " .. uniqueString)
+	
 	if spawnedObjectEntities[uniqueString] == nil then
         error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
         return
