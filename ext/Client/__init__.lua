@@ -2,11 +2,27 @@ class 'BlueprintManagerClient'
 require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
+local g_InitAll = false
 
 function BlueprintManagerClient:__init()
 	print("Initializing BlueprintManagerClient")
 	self:RegisterVars()
 	self:RegisterEvents()
+	self:RegisterHooks()
+end
+
+function BlueprintManagerClient:RegisterHooks()
+	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
+		if g_InitAll then
+			local possibleEntity = hook:Call()
+			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
+				possibleEntity:Init(Realm.Realm_Client, true)
+				possibleEntity:FireEvent("Start")
+			else
+				print("Is nil or not entity")
+			end
+		end
+	end)
 end
 
 function BlueprintManagerClient:RegisterVars()
@@ -103,10 +119,12 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.transform = linearTransform
 	params.variationNameHash = variationNameHash
 
+	g_InitAll = true
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
 	if entityBus == nil then
 		--error('entityBus was nil')
+		g_InitAll = false
 		return
 	end
 
@@ -116,6 +134,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		entity:Init(Realm.Realm_Client, true)
 		entity:FireEvent("Start")
 	end
+	g_InitAll = false
 
 	spawnedObjectEntities[uniqueString] = objectEntities
 end

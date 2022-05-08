@@ -2,8 +2,8 @@ class 'BlueprintManagerServer'
 require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
-
 local timers = {}
+local g_InitAll = false
 
 function string:split(sep)
 	local sep, fields = sep or ":", {}
@@ -38,6 +38,18 @@ function BlueprintManagerServer:__init()
 	print("Initializing BlueprintManagerServer")
 	self:RegisterVars()
 	self:RegisterEvents()
+	self:RegisterHooks()
+end
+
+function BlueprintManagerServer:RegisterHooks()
+	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
+		if g_InitAll then
+			local possibleEntity = hook:Call()
+			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
+				possibleEntity:Init(Realm.Realm_Server, true)
+			end
+		end
+	end)
 end
 
 function BlueprintManagerServer:RegisterVars()
@@ -251,10 +263,12 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		params.networked = networked
 	end
 
-	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
+	g_InitAll = true
 
+	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 	if entityBus == nil then
 		--error('entityBus was nil')
+		g_InitAll = false
 		return
 	end
 
@@ -272,6 +286,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 			end
 		end
 	end
+	g_InitAll = false
 
 	spawnedObjectEntities[uniqueString] = { 
 		objectEntities = objectEntities, 
