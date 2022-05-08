@@ -3,6 +3,7 @@ require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
 local g_InitAll = false
+local g_CurrentlySpawningBlueprint = ""
 
 function BlueprintManagerClient:__init()
 	print("Initializing BlueprintManagerClient")
@@ -11,6 +12,11 @@ function BlueprintManagerClient:__init()
 	self:RegisterHooks()
 end
 
+function BlueprintManagerClient:RegisterVars()
+end
+
+local spawnedObjectEntities = { }
+
 function BlueprintManagerClient:RegisterHooks()
 	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
 		if g_InitAll then
@@ -18,17 +24,13 @@ function BlueprintManagerClient:RegisterHooks()
 			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
 				possibleEntity:Init(Realm.Realm_Client, true)
 				possibleEntity:FireEvent("Start")
-			else
-				print("Is nil or not entity")
+
+				local length = #spawnedObjectEntities[g_CurrentlySpawningBlueprint]
+				spawnedObjectEntities[g_CurrentlySpawningBlueprint][length + 1] = possibleEntity
 			end
 		end
 	end)
 end
-
-function BlueprintManagerClient:RegisterVars()
-end
-
-local spawnedObjectEntities = { }
 
 function BlueprintManagerClient:RegisterEvents()
     Events:Subscribe('Level:LoadingInfo', self, self.OnLevelLoadingInfo)
@@ -120,6 +122,10 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.variationNameHash = variationNameHash
 
 	g_InitAll = true
+	g_CurrentlySpawningBlueprint = uniqueString
+
+	spawnedObjectEntities[uniqueString] = {}
+
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
 	if entityBus == nil then
@@ -133,10 +139,12 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	for _, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
 		entity:FireEvent("Start")
-	end
-	g_InitAll = false
 
-	spawnedObjectEntities[uniqueString] = objectEntities
+		local length = #spawnedObjectEntities[uniqueString]
+		spawnedObjectEntities[uniqueString][length + 1] = entity
+	end
+	g_CurrentlySpawningBlueprint = ""
+	g_InitAll = false
 end
 
 function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)

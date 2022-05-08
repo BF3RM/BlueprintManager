@@ -4,6 +4,7 @@ require "__shared/Logger"
 local m_Logger = Logger("BlueprintManager", false)
 local timers = {}
 local g_InitAll = false
+local g_CurrentlySpawningBlueprint = ""
 
 function string:split(sep)
 	local sep, fields = sep or ":", {}
@@ -41,12 +42,18 @@ function BlueprintManagerServer:__init()
 	self:RegisterHooks()
 end
 
+local spawnedObjectEntities = { }
+local postSpawnedObjects = { }
+
 function BlueprintManagerServer:RegisterHooks()
 	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
 		if g_InitAll then
 			local possibleEntity = hook:Call()
 			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
 				possibleEntity:Init(Realm.Realm_Server, true)
+				
+				local length = #spawnedObjectEntities[g_CurrentlySpawningBlueprint].objectEntities
+				spawnedObjectEntities[g_CurrentlySpawningBlueprint].objectEntities[length + 1] = possibleEntity
 			end
 		end
 	end)
@@ -71,9 +78,6 @@ function BlueprintManagerServer:RegisterEvents()
 	NetEvents:Subscribe('DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
 	NetEvents:Subscribe('MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
 end
-
-local spawnedObjectEntities = { }
-local postSpawnedObjects = { }
 
 function BlueprintManagerServer:OnLevelDestroyed()
 	spawnedObjectEntities = { }
@@ -264,6 +268,16 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	end
 
 	g_InitAll = true
+	g_CurrentlySpawningBlueprint = uniqueString
+
+	spawnedObjectEntities[uniqueString] = { 
+		objectEntities = {}, 
+		partitionGuid = partitionGuid, 
+		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
+		broadcastToClient = broadcastToClient, 
+		variationNameHash = variationNameHash,
+		enabled = true
+	}
 
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 	if entityBus == nil then
@@ -285,17 +299,13 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 				s_physEnt:RegisterDamageCallback(dmgFunc)
 			end
 		end
+
+		local length = #spawnedObjectEntities[uniqueString].objectEntities
+		spawnedObjectEntities[uniqueString].objectEntities[length + 1] = entity
 	end
+	g_CurrentlySpawningBlueprint = ""
 	g_InitAll = false
 
-	spawnedObjectEntities[uniqueString] = { 
-		objectEntities = objectEntities, 
-		partitionGuid = partitionGuid, 
-		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
-		broadcastToClient = broadcastToClient, 
-		variationNameHash = variationNameHash,
-		enabled = true
-	}
 
 	if broadcastToClient then
 		local postSpawnedObject = 
