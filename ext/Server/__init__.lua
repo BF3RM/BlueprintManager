@@ -2,9 +2,9 @@ class 'BlueprintManagerServer'
 require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
-local timers = {}
-local g_InitAll = false
-local g_CurrentlySpawningBlueprint = ""
+local m_Timers = {}
+local m_InitAll = false
+local m_CurrentlySpawningBlueprint = ""
 
 function string:split(sep)
 	local sep, fields = sep or ":", {}
@@ -47,13 +47,13 @@ local postSpawnedObjects = { }
 
 function BlueprintManagerServer:RegisterHooks()
 	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
-		if g_InitAll then
+		if m_InitAll then
 			local possibleEntity = hook:Call()
 			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
 				possibleEntity:Init(Realm.Realm_Server, true)
 				
-				local length = #spawnedObjectEntities[g_CurrentlySpawningBlueprint].objectEntities
-				spawnedObjectEntities[g_CurrentlySpawningBlueprint].objectEntities[length + 1] = possibleEntity
+				local length = #spawnedObjectEntities[m_CurrentlySpawningBlueprint].objectEntities
+				spawnedObjectEntities[m_CurrentlySpawningBlueprint].objectEntities[length + 1] = possibleEntity
 			end
 		end
 	end)
@@ -172,8 +172,8 @@ function BlueprintManagerServer:GetNewRandomString()
 	while(true) do
 		pseudorandom = MathUtils:GetRandomInt(10000000, 99999999)
 
-		if timers[pseudorandom] == nil then
-				timers[pseudorandom] = true
+		if m_Timers[pseudorandom] == nil then
+			m_Timers[pseudorandom] = true
 			break
 		end
 	end
@@ -267,8 +267,8 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		params.networked = networked
 	end
 
-	g_InitAll = true
-	g_CurrentlySpawningBlueprint = uniqueString
+	m_InitAll = true
+	m_CurrentlySpawningBlueprint = uniqueString
 
 	spawnedObjectEntities[uniqueString] = { 
 		objectEntities = {}, 
@@ -282,7 +282,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 	if entityBus == nil then
 		--error('entityBus was nil')
-		g_InitAll = false
+		m_InitAll = false
 		return
 	end
 
@@ -303,8 +303,8 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		local length = #spawnedObjectEntities[uniqueString].objectEntities
 		spawnedObjectEntities[uniqueString].objectEntities[length + 1] = entity
 	end
-	g_CurrentlySpawningBlueprint = ""
-	g_InitAll = false
+	m_CurrentlySpawningBlueprint = ""
+	m_InitAll = false
 
 
 	if broadcastToClient then
