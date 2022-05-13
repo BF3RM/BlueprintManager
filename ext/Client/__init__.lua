@@ -2,17 +2,35 @@ class 'BlueprintManagerClient'
 require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
+local m_InitAll = false
+local m_CurrentlySpawningBlueprint = ""
 
 function BlueprintManagerClient:__init()
 	print("Initializing BlueprintManagerClient")
 	self:RegisterVars()
 	self:RegisterEvents()
+	self:RegisterHooks()
 end
 
 function BlueprintManagerClient:RegisterVars()
 end
 
 local spawnedObjectEntities = { }
+
+function BlueprintManagerClient:RegisterHooks()
+	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
+		if m_InitAll then
+			local possibleEntity = hook:Call()
+			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
+				possibleEntity:Init(Realm.Realm_Client, true)
+				possibleEntity:FireEvent("Start")
+
+				local length = #spawnedObjectEntities[m_CurrentlySpawningBlueprint]
+				spawnedObjectEntities[m_CurrentlySpawningBlueprint][length + 1] = possibleEntity
+			end
+		end
+	end)
+end
 
 function BlueprintManagerClient:RegisterEvents()
     Events:Subscribe('Level:LoadingInfo', self, self.OnLevelLoadingInfo)
@@ -103,10 +121,16 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	params.transform = linearTransform
 	params.variationNameHash = variationNameHash
 
+	m_InitAll = true
+	m_CurrentlySpawningBlueprint = uniqueString
+
+	spawnedObjectEntities[uniqueString] = {}
+
 	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 
 	if entityBus == nil then
 		--error('entityBus was nil')
+		m_InitAll = false
 		return
 	end
 
@@ -115,9 +139,12 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	for _, entity in pairs(objectEntities) do
 		entity:Init(Realm.Realm_Client, true)
 		entity:FireEvent("Start")
-	end
 
-	spawnedObjectEntities[uniqueString] = objectEntities
+		local length = #spawnedObjectEntities[uniqueString]
+		spawnedObjectEntities[uniqueString][length + 1] = entity
+	end
+	m_CurrentlySpawningBlueprint = ""
+	m_InitAll = false
 end
 
 function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)

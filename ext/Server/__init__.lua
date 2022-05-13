@@ -2,8 +2,9 @@ class 'BlueprintManagerServer'
 require "__shared/Logger"
 
 local m_Logger = Logger("BlueprintManager", false)
-
-local timers = {}
+local m_Timers = {}
+local m_InitAll = false
+local m_CurrentlySpawningBlueprint = ""
 
 function string:split(sep)
 	local sep, fields = sep or ":", {}
@@ -38,6 +39,24 @@ function BlueprintManagerServer:__init()
 	print("Initializing BlueprintManagerServer")
 	self:RegisterVars()
 	self:RegisterEvents()
+	self:RegisterHooks()
+end
+
+local spawnedObjectEntities = { }
+local postSpawnedObjects = { }
+
+function BlueprintManagerServer:RegisterHooks()
+	Hooks:Install('EntityFactory:Create', 1, function(hook, entityData, transform)
+		if m_InitAll then
+			local possibleEntity = hook:Call()
+			if possibleEntity ~= nil and possibleEntity:Is('Entity') then
+				possibleEntity:Init(Realm.Realm_Server, true)
+				
+				local length = #spawnedObjectEntities[m_CurrentlySpawningBlueprint].objectEntities
+				spawnedObjectEntities[m_CurrentlySpawningBlueprint].objectEntities[length + 1] = possibleEntity
+			end
+		end
+	end)
 end
 
 function BlueprintManagerServer:RegisterVars()
@@ -59,9 +78,6 @@ function BlueprintManagerServer:RegisterEvents()
 	NetEvents:Subscribe('DeleteBlueprintFromClient', self, self.OnDeleteBlueprintFromClient)
 	NetEvents:Subscribe('MoveBlueprintFromClient', self, self.OnMoveBlueprintFromClient)
 end
-
-local spawnedObjectEntities = { }
-local postSpawnedObjects = { }
 
 function BlueprintManagerServer:OnLevelDestroyed()
 	spawnedObjectEntities = { }
@@ -156,8 +172,8 @@ function BlueprintManagerServer:GetNewRandomString()
 	while(true) do
 		pseudorandom = MathUtils:GetRandomInt(10000000, 99999999)
 
-		if timers[pseudorandom] == nil then
-				timers[pseudorandom] = true
+		if m_Timers[pseudorandom] == nil then
+			m_Timers[pseudorandom] = true
 			break
 		end
 	end
@@ -251,10 +267,22 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		params.networked = networked
 	end
 
-	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
+	m_InitAll = true
+	m_CurrentlySpawningBlueprint = uniqueString
 
+	spawnedObjectEntities[uniqueString] = { 
+		objectEntities = {}, 
+		partitionGuid = partitionGuid, 
+		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
+		broadcastToClient = broadcastToClient, 
+		variationNameHash = variationNameHash,
+		enabled = true
+	}
+
+	local entityBus = EntityManager:CreateEntitiesFromBlueprint(objectBlueprint, params)
 	if entityBus == nil then
 		--error('entityBus was nil')
+		m_InitAll = false
 		return
 	end
 
@@ -271,16 +299,13 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 				s_physEnt:RegisterDamageCallback(dmgFunc)
 			end
 		end
-	end
 
-	spawnedObjectEntities[uniqueString] = { 
-		objectEntities = objectEntities, 
-		partitionGuid = partitionGuid, 
-		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
-		broadcastToClient = broadcastToClient, 
-		variationNameHash = variationNameHash,
-		enabled = true
-	}
+		local length = #spawnedObjectEntities[uniqueString].objectEntities
+		spawnedObjectEntities[uniqueString].objectEntities[length + 1] = entity
+	end
+	m_CurrentlySpawningBlueprint = ""
+	m_InitAll = false
+
 
 	if broadcastToClient then
 		local postSpawnedObject = 
