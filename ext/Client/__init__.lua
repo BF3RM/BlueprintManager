@@ -233,7 +233,6 @@ function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partition
 
 	--Wait until we've recieved all pre-spawned blueprints from server before being allowed to process
 	--any new spawn events
-	print(s_SpawnedCount .. "/" .. numToReceive)
 	if s_SpawnedCount == numToReceive  then
 		m_IsAbleToProcessNewSpawnEvents = true
 	end
