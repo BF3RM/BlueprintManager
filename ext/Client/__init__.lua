@@ -4,6 +4,7 @@ require "__shared/Logger"
 local m_Logger = Logger("BlueprintManager", false)
 local m_InitAll = false
 local m_CurrentlySpawningBlueprint = ""
+local m_IsAbleToProcessNewSpawnEvents = false
 
 function BlueprintManagerClient:__init()
 	print("Initializing BlueprintManagerClient")
@@ -44,6 +45,7 @@ function BlueprintManagerClient:RegisterEvents()
     NetEvents:Subscribe('DeleteBlueprint', self, self.OnDeleteBlueprint)
     NetEvents:Subscribe('MoveBlueprint', self, self.OnMoveBlueprint)
     NetEvents:Subscribe('SpawnPostSpawnedObjects', self, self.OnSpawnPostSpawnedObject)
+	NetEvents:Subscribe('NoPreSpawnedObjects', self, self.OnNoPreSpawnedObjects)
     NetEvents:Subscribe('EnableEntity', self, self.OnEnableEntity)
 end
 
@@ -53,6 +55,10 @@ end
 
 function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
 	
+	if not m_IsAbleToProcessNewSpawnEvents then
+		return
+	end
+
 	if enable then
 		m_Logger:Write("Client received request to enable blueprint with uniqueString: " .. uniqueString)
 	else
@@ -88,8 +94,12 @@ function BlueprintManagerClient:OnMoveBlueprintFromClient(uniqueString, newLinea
     NetEvents:SendLocal('MoveBlueprintFromClient', uniqueString, newLinearTransform)
 end
 
-function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash) -- this should only be called via NetEvents
-	
+function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, ignoreEventCheck) -- this should only be called via NetEvents
+		
+	if not ignoreEventCheck and not m_IsAbleToProcessNewSpawnEvents then
+		return
+	end
+
 	m_Logger:Write("Client received request to spawn blueprint with guid: " .. tostring(blueprintPrimaryInstanceGuid))
 	
 	if partitionGuid == nil or
@@ -148,7 +158,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 end
 
 function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
-    
+    --
 	m_Logger:Write("Client received request to delete blueprint with uniqueString: " .. uniqueString)
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
@@ -166,7 +176,7 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
 end
 
 function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform)
-	
+		
 	m_Logger:Write("Client received request to move blueprint with uniqueString: " .. uniqueString)
 	
 	if spawnedObjectEntities[uniqueString] == nil then
@@ -193,7 +203,12 @@ function BlueprintManagerClient:OnLevelLoadingInfo(info)
 	end
 end
 
-function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled)
+function BlueprintManagerClient:OnNoPreSpawnedObjects()
+	print("Nothing to receive")
+	m_IsAbleToProcessNewSpawnEvents = true
+end
+
+function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, enabled, numToReceive)
 	if partitionGuid == nil or
        blueprintPrimaryInstanceGuid == nil or
        linearTransform == nil or 
@@ -202,12 +217,26 @@ function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partition
 	   error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
-	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash)
+	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, true)
 
 	-- print("OnSpawnPostSpawnedObject")
 	-- print(enabled)
 	if not enabled then
 		self:OnEnableEntity(uniqueString, enable)
+	end
+
+	local s_SpawnedCount = 0
+
+	--Length operator doesn't work on this table because it's not an array
+	for k, v in pairs(spawnedObjectEntities) do
+		s_SpawnedCount = s_SpawnedCount + 1
+	end
+
+	--Wait until we've recieved all pre-spawned blueprints from server before being allowed to process
+	--any new spawn events
+	print(s_SpawnedCount .. "/" .. numToReceive)
+	if s_SpawnedCount == numToReceive  then
+		m_IsAbleToProcessNewSpawnEvents = true
 	end
 end
 
