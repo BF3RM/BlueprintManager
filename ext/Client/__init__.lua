@@ -204,7 +204,6 @@ function BlueprintManagerClient:OnLevelLoadingInfo(info)
 end
 
 function BlueprintManagerClient:OnNoPreSpawnedObjects()
-	print("Nothing to receive")
 	m_IsAbleToProcessNewSpawnEvents = true
 end
 
