@@ -190,9 +190,22 @@ function BlueprintManagerServer:OnRequestPostSpawnedObjects(player)
 		return
 	end
 	
+	local s_Index = 0
+	local s_CountToReceive = 0
+
+	--Length operator doesn't work on this table because it's not an array
+	for k, v in pairs(postSpawnedObjects) do
+		s_CountToReceive = s_CountToReceive + 1
+	end
+
 	for uniqueString, v in pairs(postSpawnedObjects) do
-		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash, v.enabled)
+		s_Index = s_Index + 1
+		NetEvents:SendTo('SpawnPostSpawnedObjects', player, uniqueString, v.partitionGuid, v.blueprintPrimaryInstanceGuid, v.transform, v.variationNameHash, v.enabled, s_CountToReceive)
 		-- print('BlueprintManagerServer: ' .. tostring(v.transform))
+	end
+
+	if s_Index == 0 then
+		NetEvents:SendTo("NoPreSpawnedObjects", player)
 	end
 end
 
