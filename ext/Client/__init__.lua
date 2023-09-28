@@ -60,9 +60,9 @@ function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
 	end
 
 	if enable then
-		m_Logger:Write("Client received request to enable blueprint with uniqueString: " .. uniqueString)
+		m_Logger:Write("Client received request to enable blueprint with uniqueString: " .. tostring(uniqueString))
 	else
-		m_Logger:Write("Client received request to disable blueprint with uniqueString: " .. uniqueString)
+		m_Logger:Write("Client received request to disable blueprint with uniqueString: " .. tostring(uniqueString))
 	end
 	
 	if spawnedObjectEntities[uniqueString] == nil then
@@ -109,7 +109,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	end
 
 	if spawnedObjectEntities[uniqueString] ~= nil then
-		error('Object with id ' .. uniqueString .. ' already existed as a spawned entity!')
+		error('Object with id ' .. tostring(uniqueString) .. ' already existed as a spawned entity!')
 		return
 	end
 
@@ -159,7 +159,7 @@ end
 
 function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
     --
-	m_Logger:Write("Client received request to delete blueprint with uniqueString: " .. uniqueString)
+	m_Logger:Write("Client received request to delete blueprint with uniqueString: " .. tostring(uniqueString))
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
         for i, entity in pairs(spawnedObjectEntities[uniqueString]) do
@@ -170,17 +170,17 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
 
         spawnedObjectEntities[uniqueString] = nil
     else
-        error('BlueprintManagerClient:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. uniqueString .. '. The objects was successfully deleted on the server however. How could this happen?')
+        error('BlueprintManagerClient:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. tostring(uniqueString) .. '. The objects was successfully deleted on the server however. How could this happen?')
         return
     end
 end
 
 function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform)
 		
-	m_Logger:Write("Client received request to move blueprint with uniqueString: " .. uniqueString)
+	m_Logger:Write("Client received request to move blueprint with uniqueString: " .. tostring(uniqueString))
 	
 	if spawnedObjectEntities[uniqueString] == nil then
-        error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. uniqueString)
+        error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
         return
 	end
 	
