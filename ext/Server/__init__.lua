@@ -72,6 +72,7 @@ function BlueprintManagerServer:RegisterEvents()
 	Events:Subscribe('BlueprintManager:MoveBlueprint', self, self.OnMoveBlueprint)
 	Events:Subscribe('BlueprintManager:EnableEntityByEntityId', self, self.OnEnableEntityByEntityId)
 	Events:Subscribe('BlueprintManager:EnableEntity', self, self.OnEnableEntity)
+	Events:Subscribe('BlueprintManager:AddEventCallback', self, self.OnAddEventCallback)
 
 	NetEvents:Subscribe('RequestPostSpawnedObjects', self, self.OnRequestPostSpawnedObjects)
 	NetEvents:Subscribe('SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
@@ -166,6 +167,26 @@ function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 	end
 end
 
+function BlueprintManagerServer:OnAddEventCallback(uniqueId, eventId, dispatchEventName)
+	local entityBus = spawnedObjectEntities[uniqueId].entityBus
+
+	if entityBus == nil then
+		m_Logger:Write("No entityBus for " .. uniqueId)
+		return
+	end
+	local context = {
+		uniqueId = uniqueId,
+		eventId = eventId,
+		dispatchEventName = dispatchEventName}
+
+	entityBus:RegisterEventCallback(context, function(context, bus, data, event)
+		m_Logger:Write('Received entity event of type ' .. event.type .. ' and id: ' .. tostring(event.eventId))
+		if event.eventId == context.eventId then
+			Events:Dispatch(context.dispatchEventName, context.uniqueId)
+		end
+	end)
+end
+
 function BlueprintManagerServer:GetNewRandomString()
 	local pseudorandom = nil
 	
@@ -233,9 +254,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		return
 	end
 
-	if type(uniqueString) ~= 'string' or 
-	   uniqueString == nil then
-		
+	if type(uniqueString) ~= 'string' or uniqueString == nil then
 		uniqueString = BlueprintManagerServer:GetNewRandomString()
 	end
 	
@@ -283,7 +302,8 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	m_InitAll = true
 	m_CurrentlySpawningBlueprint = uniqueString
 
-	spawnedObjectEntities[uniqueString] = { 
+	spawnedObjectEntities[uniqueString] = {
+		entityBus = nil,
 		objectEntities = {}, 
 		partitionGuid = partitionGuid, 
 		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
@@ -299,6 +319,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 		return
 	end
 
+	spawnedObjectEntities[uniqueString].entityBus = entityBus
 	local objectEntities = entityBus.entities
 
 	for _, entity in pairs(objectEntities) do
@@ -336,7 +357,7 @@ end
 
 function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
 
-	m_Logger:Write("Server received request to spawn blueprint with instanceId: " .. tostring(instanceId))
+	m_Logger:Write("Server received request to delete blueprint with instanceId: " .. tostring(instanceId))
 	
 	if instanceId == nil then
 		error("OnDeleteBlueprintByEntityId : instanceId is null")
@@ -358,7 +379,7 @@ end
 
 function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
 	
-	m_Logger:Write("Server received request to spawn blueprint with uniqueString: " .. tostring(uniqueString))
+	m_Logger:Write("Server received request to delete blueprint with uniqueString: " .. tostring(uniqueString))
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
 		for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
