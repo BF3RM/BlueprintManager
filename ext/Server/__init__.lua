@@ -167,7 +167,7 @@ function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 	end
 end
 
-function BlueprintManagerServer:OnAddEventCallback(uniqueId, eventId, dispatchEventName)
+function BlueprintManagerServer:OnAddEventCallback(uniqueId, eventId, dispatchEventName, additionalContext)
 	local entityBus = spawnedObjectEntities[uniqueId].entityBus
 
 	if entityBus == nil then
@@ -182,7 +182,7 @@ function BlueprintManagerServer:OnAddEventCallback(uniqueId, eventId, dispatchEv
 	entityBus:RegisterEventCallback(context, function(context, bus, data, event)
 		m_Logger:Write('Received entity event of type ' .. event.type .. ' and id: ' .. tostring(event.eventId))
 		if event.eventId == context.eventId then
-			Events:Dispatch(context.dispatchEventName, context.uniqueId)
+			Events:Dispatch(context.dispatchEventName, context.uniqueId, table.unpack(additionalContext))
 		end
 	end)
 end
