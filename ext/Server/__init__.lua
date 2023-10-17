@@ -73,6 +73,7 @@ function BlueprintManagerServer:RegisterEvents()
 	Events:Subscribe('BlueprintManager:EnableEntityByEntityId', self, self.OnEnableEntityByEntityId)
 	Events:Subscribe('BlueprintManager:EnableEntity', self, self.OnEnableEntity)
 	Events:Subscribe('BlueprintManager:AddEventCallback', self, self.OnAddEventCallback)
+	Events:Subscribe('BlueprintManager:OnUnregisterEventCallbacks', self, self.OnUnregisterEventCallbacks)
 
 	NetEvents:Subscribe('RequestPostSpawnedObjects', self, self.OnRequestPostSpawnedObjects)
 	NetEvents:Subscribe('SpawnBlueprintFromClient', self, self.OnSpawnBlueprintFromClient)
@@ -179,12 +180,26 @@ function BlueprintManagerServer:OnAddEventCallback(uniqueId, eventId, dispatchEv
 		eventId = eventId,
 		dispatchEventName = dispatchEventName}
 
-	entityBus:RegisterEventCallback(context, function(context, bus, data, event)
+	local busCallback = entityBus:RegisterEventCallback(context, function(context, bus, data, event)
 		m_Logger:Write('Received entity event of type ' .. event.type .. ' and id: ' .. tostring(event.eventId))
 		if event.eventId == context.eventId then
 			Events:Dispatch(context.dispatchEventName, context.uniqueId, table.unpack(additionalContext))
 		end
 	end)
+	table.insert(spawnedObjectEntities[uniqueId].busCallbacks, busCallback)
+end
+
+function BlueprintManagerServer:OnUnregisterEventCallbacks(uniqueId)
+	self:UnregisterCallbacksForBus(uniqueId)
+end
+
+function BlueprintManagerServer:UnregisterCallbacksForBus(uniqueId)
+	m_Logger:Write("Unregistering EventCallback for ID: " .. uniqueId)
+	local entityBus = spawnedObjectEntities[uniqueId].entityBus
+	for _, busCallback in pairs(spawnedObjectEntities[uniqueId].busCallbacks) do
+		entityBus:UnregisterEventCallback(busCallback)
+	end
+	spawnedObjectEntities[uniqueId].busCallbacks = {}
 end
 
 function BlueprintManagerServer:GetNewRandomString()
@@ -304,7 +319,8 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 
 	spawnedObjectEntities[uniqueString] = {
 		entityBus = nil,
-		objectEntities = {}, 
+		objectEntities = {},
+		busCallbacks = {},
 		partitionGuid = partitionGuid, 
 		blueprintPrimaryInstanceGuid = blueprintPrimaryInstanceGuid, 
 		broadcastToClient = broadcastToClient, 
@@ -382,6 +398,8 @@ function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
 	m_Logger:Write("Server received request to delete blueprint with uniqueString: " .. tostring(uniqueString))
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
+		self:UnregisterCallbacksForBus(uniqueString)
+
 		for i, entity in pairs(spawnedObjectEntities[uniqueString].objectEntities) do
 			if entity ~= nil then
 				entity:Destroy()
