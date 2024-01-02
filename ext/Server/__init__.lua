@@ -195,11 +195,17 @@ end
 
 function BlueprintManagerServer:UnregisterCallbacksForBus(uniqueId)
 	m_Logger:Write("Unregistering EventCallback for ID: " .. uniqueId)
-	local entityBus = spawnedObjectEntities[uniqueId].entityBus
-	for _, busCallback in pairs(spawnedObjectEntities[uniqueId].busCallbacks) do
-		entityBus:UnregisterEventCallback(busCallback)
+	if spawnedObjectEntities ~= nil and spawnedObjectEntities[uniqueId] ~= nil then
+		local entityBus = spawnedObjectEntities[uniqueId].entityBus
+		if entityBus ~= nil then
+			for _, busCallback in pairs(spawnedObjectEntities[uniqueId].busCallbacks) do
+				if busCallback ~= nil then
+					entityBus:UnregisterEventCallback(busCallback)
+				end
+			end
+			spawnedObjectEntities[uniqueId].busCallbacks = {}
+		end
 	end
-	spawnedObjectEntities[uniqueId].busCallbacks = {}
 end
 
 function BlueprintManagerServer:GetNewRandomString()
