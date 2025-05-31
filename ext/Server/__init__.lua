@@ -265,7 +265,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	if partitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	--    error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	-- error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	   return
 	end
 	
@@ -455,7 +455,7 @@ function BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform
 	m_Logger:Write("Server received request to move entity with uniqueString: " .. tostring(uniqueString))
 
 	if spawnedObjectEntities[uniqueString] == nil then
-		error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
+		--error('BlueprintManagerServer:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
 		return
 	end
 
