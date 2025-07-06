@@ -3,7 +3,7 @@
 	"Authors": ["3ti65"],
 	"Description": "This mod can spawn and unspawn blueprints via events. Also takes care of client-syncing.",
 	"URL": "https://github.com/BF3RM/BlueprintManager",
-	"Version": "1.0.9",
+	"Version": "1.1.0",
 	"HasWebUI": false,
 	"HasVeniceEXT": true
 }
