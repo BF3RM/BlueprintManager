@@ -19,7 +19,7 @@ function BlueprintManagerServer:StringToLinearTransform(linearTransformString)
 
 	
 	if(s_Split[12] == nil) then
-		-- error("Failed String2LinearTransform: " .. tostring(linearTransformString))
+		error("Failed String2LinearTransform: " .. tostring(linearTransformString))
 		return false
 	end
 	
@@ -36,7 +36,7 @@ end
 --- remove this shit ^ 
 
 function BlueprintManagerServer:__init()
-	-- print("Initializing BlueprintManagerServer")
+	print("Initializing BlueprintManagerServer")
 	self:RegisterVars()
 	self:RegisterEvents()
 	self:RegisterHooks()
@@ -107,14 +107,14 @@ function BlueprintManagerServer:OnEnableEntityByEntityId(instanceId, enable)
 	m_Logger:Write("Server received request to enable entity with instanceId: " .. tostring(instanceId))
 
 	if instanceId == nil then
-		-- error("OnEnableEntityByEntityId : instanceId is null")
+		error("OnEnableEntityByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		-- error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
+		error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
 	end
 
 	self:OnEnableEntity(foundUniqueId, enable)
@@ -130,12 +130,12 @@ function BlueprintManagerServer:OnEnableEntity(uniqueId, enable)
 	end
 	
 	if uniqueId == nil then
-		-- error("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
+		error("BlueprintManagerServer:OnEnableEntity() : Unique id is null")
 		return
 	end
 
 	if spawnedObjectEntities[uniqueId] == nil then
-		-- error("BlueprintManagerServer:OnEnableEntity() : Tried to enable/disable entity that isn't spawned")
+		error("BlueprintManagerServer:OnEnableEntity() : Tried to enable/disable entity that isn't spawned")
 		return
 	end
 
@@ -265,13 +265,13 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	if partitionGuid == nil or
 	   blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	--    error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   error('BlueprintManagerServer:SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	   return
 	end
 	
 	linearTransform = self:StringToLinearTransform(linearTransform) -- remove this when it works
 	if(linearTransform == false) then
-		-- print("Failed to move blueprint.")
+		print("Failed to move blueprint.")
 		return
 	end
 
@@ -280,7 +280,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	end
 	
 	if spawnedObjectEntities[uniqueString] ~= nil then
-		-- error('BlueprintManagerServer:SpawnObjectBlueprint() - Object with id ' .. tostring(uniqueString) .. ' already existed as a spawned entity!')
+		error('BlueprintManagerServer:SpawnObjectBlueprint() - Object with id ' .. tostring(uniqueString) .. ' already existed as a spawned entity!')
 		return
 	end
 
@@ -289,7 +289,7 @@ function BlueprintManagerServer:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	local blueprint = ResourceManager:FindInstanceByGuid(partitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
-		-- error('BlueprintManagerServer:SpawnObjectBlueprint() couldnt find the specified instance')
+		error('BlueprintManagerServer:SpawnObjectBlueprint() couldnt find the specified instance')
 		return
 	end
 
@@ -382,14 +382,14 @@ function BlueprintManagerServer:OnDeleteBlueprintByEntityId(instanceId)
 	m_Logger:Write("Server received request to delete blueprint with instanceId: " .. tostring(instanceId))
 	
 	if instanceId == nil then
-		-- error("OnDeleteBlueprintByEntityId : instanceId is null")
+		error("OnDeleteBlueprintByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		-- error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
+		error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
 	end
 
 	self:OnDeleteBlueprint(foundUniqueId)
@@ -419,7 +419,7 @@ function BlueprintManagerServer:OnDeleteBlueprint(uniqueString, serverOnly)
 
 		spawnedObjectEntities[uniqueString] = nil
 	else
-		-- error('BlueprintManagerServer:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
+		error('BlueprintManagerServer:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
 		return
 	end
 
@@ -437,14 +437,14 @@ function BlueprintManagerServer:OnMoveBlueprintByEntityId(instanceId, newLinearT
 	m_Logger:Write("Server received request to move blueprint with instanceId: " .. tostring(instanceId))
 
 	if instanceId == nil then
-		-- error("OnMoveBlueprintByEntityId : instanceId is null")
+		error("OnMoveBlueprintByEntityId : instanceId is null")
 		return
 	end
 
 	local foundUniqueId = self:FindUniqueIdByInstanceId(instanceId)
 
 	if foundUniqueId == nil then
-		-- error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
+		error("Couldnt find uniqueId for entityId: ".. tostring(instanceId))
 	end
 
 	self:OnMoveBlueprint(foundUniqueId, newLinearTransform)

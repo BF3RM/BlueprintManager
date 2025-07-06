@@ -66,7 +66,7 @@ function BlueprintManagerClient:OnEnableEntity(uniqueString, enable)
 	end
 	
 	if spawnedObjectEntities[uniqueString] == nil then
-		-- error('Tring to enable/disable an entity that doesnt exist!')
+		error('Tring to enable/disable an entity that doesnt exist!')
 		return
 	end
 
@@ -105,11 +105,11 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
 	if partitionGuid == nil or
 	blueprintPrimaryInstanceGuid == nil or
 	   linearTransform == nil then
-	    -- error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	    error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	if spawnedObjectEntities[uniqueString] ~= nil then
-		-- error('Object with id ' .. tostring(uniqueString) .. ' already existed as a spawned entity!')
+		error('Object with id ' .. tostring(uniqueString) .. ' already existed as a spawned entity!')
 		return
 	end
 
@@ -118,7 +118,7 @@ function BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, bl
     local blueprint = ResourceManager:FindInstanceByGuid(partitionGuid, blueprintPrimaryInstanceGuid)
 
 	if blueprint == nil then
-		-- error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
+		error('BlueprintManagerClient:SpawnObjectBlueprint() couldnt find the specified instance')
 		return
 	end
 
@@ -170,7 +170,7 @@ function BlueprintManagerClient:OnDeleteBlueprint(uniqueString)
 
         spawnedObjectEntities[uniqueString] = nil
     else
-        -- error('BlueprintManagerClient:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. tostring(uniqueString) .. '. The objects was successfully deleted on the server however. How could this happen?')
+        error('BlueprintManagerClient:OnDeleteBlueprint(uniqueString): Could not find a blueprint with the ID: ' .. tostring(uniqueString) .. '. The objects was successfully deleted on the server however. How could this happen?')
         return
     end
 end
@@ -180,7 +180,7 @@ function BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform
 	m_Logger:Write("Client received request to move blueprint with uniqueString: " .. tostring(uniqueString))
 	
 	if spawnedObjectEntities[uniqueString] == nil then
-        -- error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
+        error('BlueprintManagerClient:OnMoveBlueprint(uniqueString, newLinearTransform): Could not find a blueprint with the ID: ' .. tostring(uniqueString))
         return
 	end
 	
@@ -213,7 +213,7 @@ function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partition
        linearTransform == nil or 
        uniqueString == nil or
        enabled == nil then
-	--    error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	   error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, true)
