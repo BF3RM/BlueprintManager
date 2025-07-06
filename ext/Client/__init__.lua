@@ -7,7 +7,7 @@ local m_CurrentlySpawningBlueprint = ""
 local m_IsAbleToProcessNewSpawnEvents = false
 
 function BlueprintManagerClient:__init()
-	-- print("Initializing BlueprintManagerClient")
+	print("Initializing BlueprintManagerClient")
 	self:RegisterVars()
 	self:RegisterEvents()
 	self:RegisterHooks()
@@ -213,7 +213,7 @@ function BlueprintManagerClient:OnSpawnPostSpawnedObject(uniqueString, partition
        linearTransform == nil or 
        uniqueString == nil or
        enabled == nil then
-	--error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
+	--    error('BlueprintManagerClient: SpawnObjectBlueprint(partitionGuid, blueprintPrimaryInstanceGuid, linearTransform) - One or more parameters are nil')
 	end
 
 	BlueprintManagerClient:OnSpawnBlueprint(uniqueString, partitionGuid, blueprintPrimaryInstanceGuid, linearTransform, variationNameHash, true)
