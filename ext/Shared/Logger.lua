@@ -56,12 +56,12 @@ function Logger:Write(p_Message, p_Category)
 	end
 
 	::continue::
-	if type(p_Message) == "table" then
-		print("[" .. self.m_ClassName .. "] Table:")
-		print(p_Message)
-	else
-		print("[" .. self.m_ClassName .. "] " .. tostring(p_Message))
-	end
+	-- if type(p_Message) == "table" then
+	-- 	print("[" .. self.m_ClassName .. "] Table:")
+	-- 	print(p_Message)
+	-- else
+	-- 	print("[" .. self.m_ClassName .. "] " .. tostring(p_Message))
+	-- end
 end
 
 ---@param p_Message boolean|integer|number|string
@@ -70,7 +70,7 @@ function Logger:Warning(p_Message)
 		return
 	end
 
-	print("[" .. self.m_ClassName .. "] WARNING: " .. tostring(p_Message))
+	-- print("[" .. self.m_ClassName .. "] WARNING: " .. tostring(p_Message))
 end
 
 ---@param p_Message boolean|integer|number|string
